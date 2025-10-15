@@ -10,7 +10,7 @@ interface TaskPageProps {
 }
 
 export default async function TaskPage({ params }: TaskPageProps) {
-  const supabase = await createClient()
+  const supabase = createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()

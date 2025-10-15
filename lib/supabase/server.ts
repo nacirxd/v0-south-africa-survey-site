@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { cache } from "react"
 
 // Check if Supabase environment variables are available
 export const isSupabaseConfigured =
@@ -8,8 +9,8 @@ export const isSupabaseConfigured =
   typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
 
-export async function createClient() {
-  const cookieStore = await cookies()
+export const createClient = cache(() => {
+  const cookieStore = cookies()
 
   if (!isSupabaseConfigured) {
     console.warn("Supabase environment variables are not set. Using dummy client.")
@@ -37,4 +38,4 @@ export async function createClient() {
       },
     },
   })
-}
+})
