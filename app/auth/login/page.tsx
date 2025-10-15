@@ -3,7 +3,8 @@ import { redirect } from "next/navigation"
 import LoginForm from "@/components/login-form"
 
 export default async function LoginPage() {
-  const supabase = createClient()
+  // Check if user is already logged in
+  const supabase = await createClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()

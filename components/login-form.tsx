@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,7 +34,7 @@ function SubmitButton() {
 
 export default function LoginForm() {
   const router = useRouter()
-  const [state, formAction] = useFormState(signIn, null)
+  const [state, formAction] = useActionState(signIn, null)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
