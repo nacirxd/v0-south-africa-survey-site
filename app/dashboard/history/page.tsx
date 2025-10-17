@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/dashboard-layout"
 import HistoryAndWithdrawals from "@/components/history-withdrawals"
 
 export default async function HistoryPage() {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured()) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <h1 className="text-2xl font-bold mb-4 text-foreground">Connect Supabase to get started</h1>

@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/dashboard-layout"
 import DashboardOverview from "@/components/dashboard-overview"
 
 export default async function DashboardPage() {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured()) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <h1 className="text-2xl font-bold mb-4 text-foreground">Connect Supabase to get started</h1>
@@ -25,8 +25,8 @@ export default async function DashboardPage() {
   // Get user profile and stats
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  const southAfricaTime = new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" })
-  const today = new Date(southAfricaTime)
+  const nigeriaTime = new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" })
+  const today = new Date(nigeriaTime)
   const todayString = today.toISOString().split("T")[0]
 
   // Get today's completed tasks count

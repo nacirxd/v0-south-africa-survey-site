@@ -1,11 +1,14 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-export const isSupabaseConfigured =
-  typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
-  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+export function isSupabaseConfigured() {
+  return (
+    typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
+    typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+  )
+}
 
 export async function createClient() {
   const cookieStore = await cookies()
