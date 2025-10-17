@@ -172,3 +172,114 @@ export async function signOut() {
   await supabase.auth.signOut()
   redirect("/auth/login")
 }
+
+export async function submitTaskCompletion(
+  userId: string,
+  taskId: string,
+  answers: any,
+  rewardAmount: number,
+  taskTitle: string,
+) {
+  try {
+    // Use service role key to bypass RLS policies
+    const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+    // Get current UTC time
+    const now = new Date()
+
+    // Calculate Nigeria time (UTC+1)
+    const nigeriaOffset = 1 * 60
+    const nigeriaTime = new Date(now.getTime() + nigeriaOffset * 60 * 1000)
+
+    // Calculate 24 hours ago in Nigeria time
+    const twentyFourHoursAgo = new Date(nigeriaTime.getTime() - 24 * 60 * 60 * 1000)
+
+    // Check for existing completion
+    const { data: existingCompletion, error: checkError } = await supabaseAdmin
+      .from("task_completions")
+      .select("id, completed_at")
+      .eq("user_id", userId)
+      .eq("task_id", taskId)
+      .single()
+
+    if (checkError && checkError.code !== "PGRST116") {
+      return { error: `Failed to verify task status: ${checkError.message}` }
+    }
+
+    if (existingCompletion) {
+      const completionTime = new Date(existingCompletion.completed_at)
+      const timeDiff = nigeriaTime.getTime() - completionTime.getTime()
+      const hoursDiff = timeDiff / (1000 * 60 * 60)
+
+      if (hoursDiff < 24) {
+        return {
+          error:
+            "This survey has already been completed within the last 24 hours. Please wait before attempting again.",
+        }
+      }
+
+      // Update existing record
+      const { error: updateError } = await supabaseAdmin
+        .from("task_completions")
+        .update({
+          answers: answers,
+          reward_earned: rewardAmount,
+          completed_at: now.toISOString(),
+        })
+        .eq("id", existingCompletion.id)
+
+      if (updateError) {
+        return { error: `Failed to update task completion: ${updateError.message}` }
+      }
+    } else {
+      // Create new completion record
+      const { error: completionError } = await supabaseAdmin.from("task_completions").insert({
+        user_id: userId,
+        task_id: taskId,
+        answers: answers,
+        reward_earned: rewardAmount,
+      })
+
+      if (completionError) {
+        return { error: `Failed to record task completion: ${completionError.message}` }
+      }
+    }
+
+    // Update user earnings
+    const { error: profileError } = await supabaseAdmin.rpc("update_user_earnings", {
+      user_id: userId,
+      amount: rewardAmount,
+    })
+
+    if (profileError) {
+      return { error: `Failed to update earnings: ${profileError.message}` }
+    }
+
+    // Add to earnings history
+    const { error: historyError } = await supabaseAdmin.from("earnings_history").insert({
+      user_id: userId,
+      amount: rewardAmount,
+      type: "task_completion",
+      description: `Completed survey: ${taskTitle}`,
+      task_id: taskId,
+    })
+
+    if (historyError) {
+      return { error: `Failed to record earnings history: ${historyError.message}` }
+    }
+
+    // Update task completion count
+    const { error: taskError } = await supabaseAdmin.rpc("increment_task_completions", {
+      task_id: taskId,
+    })
+
+    if (taskError) {
+      return { error: `Failed to update task statistics: ${taskError.message}` }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error in submitTaskCompletion:", error)
+    return { error: error instanceof Error ? error.message : "Unknown error occurred" }
+  }
+}
