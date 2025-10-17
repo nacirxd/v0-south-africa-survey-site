@@ -1,36 +1,35 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 async function createSupabaseClient() {
   const cookieStore = await cookies()
 
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    auth: {
-      storage: {
-        getItem: (key: string) => {
-          return cookieStore.get(key)?.value
-        },
-        setItem: (key: string, value: string) => {
-          try {
-            cookieStore.set(key, value, {
-              path: "/",
-              maxAge: 60 * 60 * 24 * 7, // 7 days
-            })
-          } catch {
-            // Server Component - cookies will be set by middleware
-          }
-        },
-        removeItem: (key: string) => {
-          try {
-            cookieStore.delete(key)
-          } catch {
-            // Server Component - cookies will be removed by middleware
-          }
-        },
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
       },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // Server Component - cookies will be set by middleware
+        }
+      },
+    },
+  })
+}
+
+function createAdminClient() {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
     },
   })
 }
@@ -82,8 +81,7 @@ export async function signUp(prevState: any, formData: FormData) {
   }
 
   const supabase = await createSupabaseClient()
-
-  const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const supabaseAdmin = createAdminClient()
 
   const headersList = await headers()
   const host = headersList.get("host")
@@ -181,8 +179,7 @@ export async function submitTaskCompletion(
   taskTitle: string,
 ) {
   try {
-    // Use service role key to bypass RLS policies
-    const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const supabaseAdmin = createAdminClient()
 
     // Get current UTC time
     const now = new Date()
