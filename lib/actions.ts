@@ -1,35 +1,33 @@
 "use server"
 
-import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 async function createSupabaseClient() {
   const cookieStore = await cookies()
+  const accessToken = cookieStore.get("sb-access-token")?.value
 
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll()
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        } catch {
-          // Server Component - cookies will be set by middleware
-        }
-      },
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      headers: accessToken
+        ? {
+            Authorization: `Bearer ${accessToken}`,
+          }
+        : {},
     },
   })
 }
 
 function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    cookies: {
-      getAll() {
-        return []
-      },
-      setAll() {},
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
     },
   })
 }
@@ -50,13 +48,29 @@ export async function signIn(prevState: any, formData: FormData) {
   const supabase = await createSupabaseClient()
 
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.toString(),
       password: password.toString(),
     })
 
     if (error) {
       return { error: error.message }
+    }
+
+    if (data.session) {
+      const cookieStore = await cookies()
+      cookieStore.set("sb-access-token", data.session.access_token, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      })
+      cookieStore.set("sb-refresh-token", data.session.refresh_token, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      })
     }
 
     return { success: true }
@@ -168,6 +182,11 @@ export async function signOut() {
   const supabase = await createSupabaseClient()
 
   await supabase.auth.signOut()
+
+  const cookieStore = await cookies()
+  cookieStore.delete("sb-access-token")
+  cookieStore.delete("sb-refresh-token")
+
   redirect("/auth/login")
 }
 

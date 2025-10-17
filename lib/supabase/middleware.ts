@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
 export const isSupabaseConfigured =
@@ -13,35 +13,50 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request,
   })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
-        },
-      },
+  const accessToken = request.cookies.get("sb-access-token")?.value
+  const refreshToken = request.cookies.get("sb-refresh-token")?.value
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
     },
-  )
+    global: {
+      headers: accessToken
+        ? {
+            Authorization: `Bearer ${accessToken}`,
+          }
+        : {},
+    },
+  })
 
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
 
   if (code) {
     try {
-      await supabase.auth.exchangeCodeForSession(code)
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) throw error
+
+      if (data.session) {
+        supabaseResponse.cookies.set("sb-access-token", data.session.access_token, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        })
+        supabaseResponse.cookies.set("sb-refresh-token", data.session.refresh_token, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        })
+      }
+
       return NextResponse.redirect(new URL("/dashboard", request.url))
     } catch (error) {
       console.error("[v0] Error exchanging code for session:", error)
