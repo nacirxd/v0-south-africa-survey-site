@@ -33,7 +33,7 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
   })
 
   const supabase = createClient()
-  const MINIMUM_WITHDRAWAL = 200
+  const MINIMUM_WITHDRAWAL = 250
 
   const paymentMethods = [
     { value: "eft", label: "EFT - Electronic Funds Transfer", icon: Building2 },
@@ -279,8 +279,8 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
               )}
 
               <p className="text-xs text-blue-600 mt-4">
-                • Minimum withdrawal: ${MINIMUM_WITHDRAWAL} • Processing time: 3-5 business days • All payments are
-                processed in USD and converted to ZAR at current exchange rates
+                • Minimum withdrawal: $250 • Processing time: 3-5 business days • All payments are processed in USD and
+                converted to NGN at current exchange rates
               </p>
             </CardContent>
           </Card>
