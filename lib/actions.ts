@@ -198,6 +198,7 @@ export async function submitTaskCompletion(
   taskTitle: string,
 ) {
   try {
+    console.log("[v0] submitTaskCompletion called:", { userId, taskId, rewardAmount, taskTitle })
     const supabaseAdmin = createAdminClient()
 
     // Get current UTC time
@@ -219,10 +220,12 @@ export async function submitTaskCompletion(
       .single()
 
     if (checkError && checkError.code !== "PGRST116") {
+      console.log("[v0] Error checking existing completion:", checkError)
       return { error: `Failed to verify task status: ${checkError.message}` }
     }
 
     if (existingCompletion) {
+      console.log("[v0] Found existing completion, updating...")
       const completionTime = new Date(existingCompletion.completed_at)
       const timeDiff = nigeriaTime.getTime() - completionTime.getTime()
       const hoursDiff = timeDiff / (1000 * 60 * 60)
@@ -245,9 +248,11 @@ export async function submitTaskCompletion(
         .eq("id", existingCompletion.id)
 
       if (updateError) {
+        console.log("[v0] Error updating completion:", updateError)
         return { error: `Failed to update task completion: ${updateError.message}` }
       }
     } else {
+      console.log("[v0] Creating new completion record...")
       // Create new completion record
       const { error: completionError } = await supabaseAdmin.from("task_completions").insert({
         user_id: userId,
@@ -257,20 +262,25 @@ export async function submitTaskCompletion(
       })
 
       if (completionError) {
+        console.log("[v0] Error creating completion:", completionError)
         return { error: `Failed to record task completion: ${completionError.message}` }
       }
     }
 
+    console.log("[v0] Updating user earnings...")
     // Update user earnings
-    const { error: profileError } = await supabaseAdmin.rpc("update_user_earnings", {
+    const { data: earningsData, error: profileError } = await supabaseAdmin.rpc("update_user_earnings", {
       user_id: userId,
       amount: rewardAmount,
     })
 
     if (profileError) {
+      console.log("[v0] Error updating earnings:", profileError)
       return { error: `Failed to update earnings: ${profileError.message}` }
     }
+    console.log("[v0] Earnings updated successfully:", earningsData)
 
+    console.log("[v0] Adding to earnings history...")
     // Add to earnings history
     const { error: historyError } = await supabaseAdmin.from("earnings_history").insert({
       user_id: userId,
@@ -281,21 +291,25 @@ export async function submitTaskCompletion(
     })
 
     if (historyError) {
+      console.log("[v0] Error adding to earnings history:", historyError)
       return { error: `Failed to record earnings history: ${historyError.message}` }
     }
 
+    console.log("[v0] Incrementing task completions...")
     // Update task completion count
     const { error: taskError } = await supabaseAdmin.rpc("increment_task_completions", {
       task_id: taskId,
     })
 
     if (taskError) {
+      console.log("[v0] Error incrementing task completions:", taskError)
       return { error: `Failed to update task statistics: ${taskError.message}` }
     }
 
+    console.log("[v0] Task completion successful!")
     return { success: true }
   } catch (error) {
-    console.error("Error in submitTaskCompletion:", error)
+    console.error("[v0] Error in submitTaskCompletion:", error)
     return { error: error instanceof Error ? error.message : "Unknown error occurred" }
   }
 }
