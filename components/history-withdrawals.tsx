@@ -51,12 +51,28 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
 
   const fetchData = async () => {
     try {
-      // Fetch available balance
-      const { data: profile } = await supabase.from("profiles").select("available_balance").eq("id", userId).single()
+      // Fetch all task completions and sum the rewards
+      const { data: completions } = await supabase
+        .from("task_completions")
+        .select("reward_earned")
+        .eq("user_id", userId)
 
-      if (profile) {
-        setAvailableBalance(profile.available_balance || 0)
-      }
+      const totalEarned = completions?.reduce((sum, completion) => sum + (completion.reward_earned || 0), 0) || 0
+
+      // Fetch completed withdrawals and sum them
+      const { data: completedWithdrawals } = await supabase
+        .from("withdrawal_requests")
+        .select("amount")
+        .eq("user_id", userId)
+        .eq("status", "completed")
+
+      const totalWithdrawn = completedWithdrawals?.reduce((sum, withdrawal) => sum + (withdrawal.amount || 0), 0) || 0
+
+      // Calculate available balance
+      const balance = totalEarned - totalWithdrawn
+      setAvailableBalance(balance)
+
+      console.log("[v0] Balance calculation:", { totalEarned, totalWithdrawn, balance })
 
       // Fetch earnings history
       const { data: earnings } = await supabase
@@ -76,7 +92,7 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
 
       setWithdrawalHistory(withdrawals || [])
     } catch (error) {
-      console.error("Error fetching data:", error)
+      console.error("[v0] Error fetching data:", error)
     }
   }
 
