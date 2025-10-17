@@ -217,9 +217,9 @@ export async function submitTaskCompletion(
       .select("id, completed_at")
       .eq("user_id", userId)
       .eq("task_id", taskId)
-      .single()
+      .maybeSingle()
 
-    if (checkError && checkError.code !== "PGRST116") {
+    if (checkError) {
       console.log("[v0] Error checking existing completion:", checkError)
       return { error: `Failed to verify task status: ${checkError.message}` }
     }
