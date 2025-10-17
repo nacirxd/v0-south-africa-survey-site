@@ -23,9 +23,47 @@ export default async function HistoryPage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
+  // Fetch all task completions and sum the rewards
+  const { data: completions } = await supabase.from("task_completions").select("reward_earned").eq("user_id", user.id)
+
+  const totalEarned = completions?.reduce((sum, completion) => sum + (completion.reward_earned || 0), 0) || 0
+
+  // Fetch completed withdrawals and sum them
+  const { data: completedWithdrawals } = await supabase
+    .from("withdrawal_requests")
+    .select("amount")
+    .eq("user_id", user.id)
+    .eq("status", "completed")
+
+  const totalWithdrawn = completedWithdrawals?.reduce((sum, withdrawal) => sum + (withdrawal.amount || 0), 0) || 0
+
+  // Calculate available balance
+  const availableBalance = totalEarned - totalWithdrawn
+
+  // Fetch earnings history
+  const { data: earningsHistory } = await supabase
+    .from("earnings_history")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+
+  // Fetch withdrawal history
+  const { data: withdrawalHistory } = await supabase
+    .from("withdrawal_requests")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("requested_at", { ascending: false })
+
+  console.log("[v0] Server-side balance calculation:", { totalEarned, totalWithdrawn, availableBalance })
+
   return (
     <DashboardLayout user={user} profile={profile}>
-      <HistoryAndWithdrawals userId={user.id} />
+      <HistoryAndWithdrawals
+        userId={user.id}
+        initialBalance={availableBalance}
+        initialEarnings={earningsHistory || []}
+        initialWithdrawals={withdrawalHistory || []}
+      />
     </DashboardLayout>
   )
 }

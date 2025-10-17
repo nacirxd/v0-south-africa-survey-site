@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,12 +15,20 @@ import { createClient } from "@/lib/supabase/client"
 
 interface HistoryAndWithdrawalsProps {
   userId: string
+  initialBalance: number
+  initialEarnings: any[]
+  initialWithdrawals: any[]
 }
 
-export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsProps) {
-  const [availableBalance, setAvailableBalance] = useState(0)
-  const [earningsHistory, setEarningsHistory] = useState<any[]>([])
-  const [withdrawalHistory, setWithdrawalHistory] = useState<any[]>([])
+export default function HistoryAndWithdrawals({
+  userId,
+  initialBalance,
+  initialEarnings,
+  initialWithdrawals,
+}: HistoryAndWithdrawalsProps) {
+  const [availableBalance, setAvailableBalance] = useState(initialBalance)
+  const [earningsHistory, setEarningsHistory] = useState<any[]>(initialEarnings)
+  const [withdrawalHistory, setWithdrawalHistory] = useState<any[]>(initialWithdrawals)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [withdrawalAmount, setWithdrawalAmount] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("")
@@ -44,57 +52,6 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
     { value: "nedbank", label: "Nedbank", icon: Building2 },
     { value: "mtn_money", label: "MTN Money", icon: Smartphone },
   ]
-
-  useEffect(() => {
-    fetchData()
-  }, [userId])
-
-  const fetchData = async () => {
-    try {
-      // Fetch all task completions and sum the rewards
-      const { data: completions } = await supabase
-        .from("task_completions")
-        .select("reward_earned")
-        .eq("user_id", userId)
-
-      const totalEarned = completions?.reduce((sum, completion) => sum + (completion.reward_earned || 0), 0) || 0
-
-      // Fetch completed withdrawals and sum them
-      const { data: completedWithdrawals } = await supabase
-        .from("withdrawal_requests")
-        .select("amount")
-        .eq("user_id", userId)
-        .eq("status", "completed")
-
-      const totalWithdrawn = completedWithdrawals?.reduce((sum, withdrawal) => sum + (withdrawal.amount || 0), 0) || 0
-
-      // Calculate available balance
-      const balance = totalEarned - totalWithdrawn
-      setAvailableBalance(balance)
-
-      console.log("[v0] Balance calculation:", { totalEarned, totalWithdrawn, balance })
-
-      // Fetch earnings history
-      const { data: earnings } = await supabase
-        .from("earnings_history")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-
-      setEarningsHistory(earnings || [])
-
-      // Fetch withdrawal history
-      const { data: withdrawals } = await supabase
-        .from("withdrawal_requests")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-
-      setWithdrawalHistory(withdrawals || [])
-    } catch (error) {
-      console.error("[v0] Error fetching data:", error)
-    }
-  }
 
   const handleWithdrawalSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,7 +90,7 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
         branchCode: "",
         mobileNumber: "",
       })
-      fetchData()
+      window.location.reload()
     } catch (error) {
       console.error("Error submitting withdrawal:", error)
       alert("Error submitting withdrawal request")
