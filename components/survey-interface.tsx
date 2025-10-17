@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, ArrowRight, CheckCircle, DollarSign, MapPin } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
 interface SurveyQuestion {
   id: string
@@ -215,6 +215,8 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
     setIsSubmitting(true)
     try {
       console.log("[v0] Starting survey submission for user:", userId, "task:", task.id)
+
+      const supabase = createClient()
 
       console.log("[v0] Checking if task was completed in last 24 hours...")
 

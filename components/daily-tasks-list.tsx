@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CheckSquare, Clock, DollarSign, MapPin, Play } from "lucide-react"
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 
 interface Task {
@@ -33,8 +33,8 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
     fetchCompletedTasks()
 
     const interval = setInterval(() => {
-      const southAfricaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" }))
-      const dayOfWeek = southAfricaTime.getDay()
+      const nigeriaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" }))
+      const dayOfWeek = nigeriaTime.getDay()
 
       if (currentDay !== -1 && currentDay !== dayOfWeek) {
         console.log("[v0] Day changed from", currentDay, "to", dayOfWeek, "- refreshing tasks")
@@ -51,9 +51,11 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
     try {
       console.log("[v0] Fetching daily tasks with rotation logic...")
 
+      const supabase = createClient()
+
       const today = new Date()
-      const southAfricaTime = new Date(today.toLocaleString("en-US", { timeZone: "Africa/Johannesburg" }))
-      const dayOfWeek = southAfricaTime.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const nigeriaTime = new Date(today.toLocaleString("en-US", { timeZone: "Africa/Lagos" }))
+      const dayOfWeek = nigeriaTime.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
       setTasks([])
       setLoading(true)
@@ -80,10 +82,7 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         }
 
         const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        console.log(
-          "[v0] South Africa time:",
-          southAfricaTime.toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" }),
-        )
+        console.log("[v0] Nigeria time:", nigeriaTime.toLocaleString("en-ZA", { timeZone: "Africa/Lagos" }))
         console.log("[v0] Selected", rotatedTasks.length, "tasks for", dayNames[dayOfWeek], "(weekday", dayOfWeek, ")")
         console.log("[v0] Task IDs for today:", rotatedTasks.map((t) => t.id.slice(0, 8)).join(", "))
         setTasks(rotatedTasks)
@@ -103,8 +102,10 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
     try {
       console.log("[v0] Checking completed tasks for user:", userId)
 
-      const southAfricaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" }))
-      const twentyFourHoursAgo = new Date(southAfricaTime.getTime() - 24 * 60 * 60 * 1000)
+      const supabase = createClient()
+
+      const nigeriaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" }))
+      const twentyFourHoursAgo = new Date(nigeriaTime.getTime() - 24 * 60 * 60 * 1000)
 
       const { data: completions, error } = await supabase
         .from("task_completions")
@@ -121,7 +122,7 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         })
       }
 
-      console.log("[v0] Found", completedIds.size, "tasks completed in last 24 hours (SA time)")
+      console.log("[v0] Found", completedIds.size, "tasks completed in last 24 hours (Nigeria time)")
       setCompletedTasks(completedIds)
     } catch (error) {
       console.error("Error fetching completed tasks:", error)
@@ -182,9 +183,7 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Daily Tasks</h1>
-        <p className="text-blue-100">
-          Complete surveys about South Africa. New tasks rotate weekly based on South African time.
-        </p>
+        <p className="text-blue-100">Complete surveys about Nigeria. New tasks rotate weekly based on Nigerian time.</p>
         <Button
           onClick={() => {
             fetchTasks()
