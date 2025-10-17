@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +32,7 @@ function SubmitButton() {
 }
 
 export default function SignUpForm() {
-  const [state, formAction] = useFormState(signUp, null)
+  const [state, formAction] = useActionState(signUp, null)
   const [showPassword, setShowPassword] = useState(false)
 
   return (
