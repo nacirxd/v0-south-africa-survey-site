@@ -1,6 +1,7 @@
 "use client"
 
 import { useFormState } from "react-dom"
+import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +12,7 @@ import { useEffect, useState } from "react"
 import { signIn } from "@/lib/actions"
 
 function SubmitButton() {
-  const { pending } = useFormState()
+  const { pending } = useFormStatus()
 
   return (
     <Button
