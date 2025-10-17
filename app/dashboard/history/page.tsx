@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import HistoryAndWithdrawals from "@/components/history-withdrawals"
 
+export const dynamic = "force-dynamic"
+
 export default async function HistoryPage() {
   if (!isSupabaseConfigured()) {
     return (
