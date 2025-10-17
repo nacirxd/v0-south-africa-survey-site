@@ -250,11 +250,12 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
                         Completed
                       </Button>
                     ) : (
-                      <Link href={`/dashboard/tasks/${task.id}`}>
-                        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                          <Play className="w-4 h-4 mr-2" />
-                          Start Survey
-                        </Button>
+                      <Link
+                        href={`/dashboard/tasks/${task.id}`}
+                        className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2"
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Survey
                       </Link>
                     )}
                   </div>
