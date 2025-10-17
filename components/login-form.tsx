@@ -1,7 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
-import { useFormStatus } from "react-dom"
+import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +11,7 @@ import { useEffect, useState } from "react"
 import { signIn } from "@/lib/actions"
 
 function SubmitButton() {
-  const { pending } = useFormStatus()
+  const { pending } = useFormState()
 
   return (
     <Button
@@ -34,7 +33,7 @@ function SubmitButton() {
 
 export default function LoginForm() {
   const router = useRouter()
-  const [state, formAction] = useActionState(signIn, null)
+  const [state, formAction] = useFormState(signIn, null)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
