@@ -27,9 +27,9 @@ export default async function TaskPage({ params }: TaskPageProps) {
   }
 
   const now = new Date()
-  const saOffset = 2 * 60 * 60 * 1000 // UTC+2 in milliseconds
-  const saTime = new Date(now.getTime() + saOffset)
-  const twentyFourHoursAgo = new Date(saTime.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const nigeriaOffset = 1 * 60 * 60 * 1000 // UTC+1 in milliseconds
+  const nigeriaTime = new Date(now.getTime() + nigeriaOffset)
+  const twentyFourHoursAgo = new Date(nigeriaTime.getTime() - 24 * 60 * 60 * 1000).toISOString()
 
   const { data: recentCompletion } = await supabase
     .from("task_completions")
@@ -37,7 +37,7 @@ export default async function TaskPage({ params }: TaskPageProps) {
     .eq("user_id", user.id)
     .eq("task_id", params.taskId)
     .gte("completed_at", twentyFourHoursAgo)
-    .single()
+    .maybeSingle()
 
   if (recentCompletion) {
     redirect("/dashboard/tasks")
