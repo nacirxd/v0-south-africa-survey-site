@@ -54,9 +54,7 @@ export default function LoginForm() {
             <span className="text-xl font-bold text-blue-900">SA Survey Rewards</span>
           </div>
           <CardTitle className="text-2xl font-bold text-blue-900">Welcome Back</CardTitle>
-          <CardDescription className="text-blue-700">
-            Sign in to continue earning with South African surveys
-          </CardDescription>
+          <CardDescription className="text-blue-700">Sign in to continue earning with Nigerian surveys</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-6">

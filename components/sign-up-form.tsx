@@ -45,10 +45,8 @@ export default function SignUpForm() {
             </div>
             <span className="text-xl font-bold text-blue-900">SA Survey Rewards</span>
           </div>
-          <CardTitle className="text-2xl font-bold text-blue-900">Join SA Survey Rewards</CardTitle>
-          <CardDescription className="text-blue-700">
-            Start earning $8-12 daily with South African surveys
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold text-blue-900">Join Nigeria Survey Rewards</CardTitle>
+          <CardDescription className="text-blue-700">Start earning $8-12 daily with Nigerian surveys</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-6">

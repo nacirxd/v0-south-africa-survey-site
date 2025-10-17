@@ -48,44 +48,34 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
         {
           id: "q1",
           type: "multiple_choice",
-          question: "Which city is the legislative capital of South Africa?",
-          options: ["Cape Town", "Johannesburg", "Pretoria", "Durban"],
+          question: "What is the capital city of Nigeria?",
+          options: ["Lagos", "Abuja", "Kano", "Port Harcourt"],
           required: true,
         },
         {
           id: "q2",
           type: "multiple_choice",
-          question: "What is the highest mountain in South Africa?",
-          options: ["Table Mountain", "Drakensberg", "Mafadi", "Champagne Castle"],
+          question: "Which is the longest river in Nigeria?",
+          options: ["Niger River", "Benue River", "Cross River", "Kaduna River"],
           required: true,
         },
         {
           id: "q3",
           type: "rating",
-          question: "How would you rate Cape Town as a tourist destination? (1-5 stars)",
+          question: "How would you rate Lagos as a tourist destination? (1-5 stars)",
           required: true,
         },
         {
           id: "q4",
           type: "textarea",
-          question: "Describe your favorite South African city and why you like it.",
+          question: "Describe your favorite Nigerian city and why you like it.",
           required: true,
         },
         {
           id: "q5",
           type: "checkbox",
-          question: "Which South African provinces have you visited? (Select all that apply)",
-          options: [
-            "Western Cape",
-            "Eastern Cape",
-            "Northern Cape",
-            "Free State",
-            "KwaZulu-Natal",
-            "North West",
-            "Gauteng",
-            "Mpumalanga",
-            "Limpopo",
-          ],
+          question: "Which Nigerian states have you visited? (Select all that apply)",
+          options: ["Lagos", "Abuja", "Kano", "Rivers", "Oyo", "Kaduna", "Enugu", "Delta", "Anambra"],
           required: true,
         },
       ],
@@ -93,34 +83,34 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
         {
           id: "q1",
           type: "multiple_choice",
-          question: "How many official languages does South Africa have?",
-          options: ["9", "11", "13", "15"],
+          question: "How many major ethnic groups does Nigeria have?",
+          options: ["2", "3", "4", "Over 250"],
           required: true,
         },
         {
           id: "q2",
           type: "checkbox",
-          question: "Which traditional South African foods have you tried? (Select all that apply)",
-          options: ["Bobotie", "Biltong", "Boerewors", "Potjiekos", "Koeksisters", "Bunny Chow"],
+          question: "Which traditional Nigerian foods have you tried? (Select all that apply)",
+          options: ["Jollof Rice", "Suya", "Pounded Yam", "Egusi Soup", "Akara", "Moi Moi"],
           required: true,
         },
         {
           id: "q3",
           type: "rating",
-          question: "How important is it to preserve South African cultural traditions? (1-5 scale)",
+          question: "How important is it to preserve Nigerian cultural traditions? (1-5 scale)",
           required: true,
         },
         {
           id: "q4",
           type: "textarea",
-          question: "What aspect of South African culture are you most proud of?",
+          question: "What aspect of Nigerian culture are you most proud of?",
           required: true,
         },
         {
           id: "q5",
           type: "multiple_choice",
-          question: "Which is considered South Africa's national animal?",
-          options: ["Lion", "Springbok", "Elephant", "Rhino"],
+          question: "Which music genre originated in Nigeria?",
+          options: ["Afrobeats", "Reggae", "Salsa", "Jazz"],
           required: true,
         },
       ],
@@ -128,34 +118,34 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
         {
           id: "q1",
           type: "multiple_choice",
-          question: "What is South Africa's primary currency?",
-          options: ["Rand", "Dollar", "Pound", "Euro"],
+          question: "What is Nigeria's primary currency?",
+          options: ["Naira", "Dollar", "Pound", "Cedi"],
           required: true,
         },
         {
           id: "q2",
           type: "rating",
-          question: "How would you rate the current economic opportunities in South Africa? (1-5 scale)",
+          question: "How would you rate the current economic opportunities in Nigeria? (1-5 scale)",
           required: true,
         },
         {
           id: "q3",
           type: "checkbox",
-          question: "Which industries do you think are most important for South Africa's economy?",
-          options: ["Mining", "Agriculture", "Tourism", "Manufacturing", "Technology", "Financial Services"],
+          question: "Which industries do you think are most important for Nigeria's economy?",
+          options: ["Oil & Gas", "Agriculture", "Technology", "Manufacturing", "Entertainment", "Financial Services"],
           required: true,
         },
         {
           id: "q4",
           type: "textarea",
-          question: "What do you think could improve South Africa's economic growth?",
+          question: "What do you think could improve Nigeria's economic growth?",
           required: true,
         },
         {
           id: "q5",
           type: "multiple_choice",
-          question: "Which city is considered South Africa's economic hub?",
-          options: ["Cape Town", "Johannesburg", "Durban", "Pretoria"],
+          question: "Which city is considered Nigeria's economic hub?",
+          options: ["Lagos", "Abuja", "Port Harcourt", "Kano"],
           required: true,
         },
       ],
@@ -166,33 +156,33 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
         {
           id: "q1",
           type: "multiple_choice",
-          question: "How familiar are you with South African culture?",
+          question: "How familiar are you with Nigerian culture?",
           options: ["Very familiar", "Somewhat familiar", "Not very familiar", "Not familiar at all"],
           required: true,
         },
         {
           id: "q2",
           type: "rating",
-          question: "How would you rate your overall experience living in or visiting South Africa? (1-5 stars)",
+          question: "How would you rate your overall experience living in or visiting Nigeria? (1-5 stars)",
           required: true,
         },
         {
           id: "q3",
           type: "textarea",
-          question: "What do you think makes South Africa unique?",
+          question: "What do you think makes Nigeria unique?",
           required: true,
         },
         {
           id: "q4",
           type: "checkbox",
-          question: "What aspects of South Africa interest you most?",
+          question: "What aspects of Nigeria interest you most?",
           options: ["History", "Culture", "Nature", "Economy", "Sports", "Food"],
           required: true,
         },
         {
           id: "q5",
           type: "text",
-          question: "In one word, how would you describe South Africa?",
+          question: "In one word, how would you describe Nigeria?",
           required: true,
         },
       ]
@@ -231,16 +221,16 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
       // Get current UTC time
       const now = new Date()
 
-      // Calculate South Africa time (UTC+2)
-      const saOffset = 2 * 60 // South Africa is UTC+2 (120 minutes)
-      const saTime = new Date(now.getTime() + saOffset * 60 * 1000)
+      // Calculate Nigeria time (UTC+1)
+      const nigeriaOffset = 1 * 60 // Nigeria is UTC+1 (60 minutes)
+      const nigeriaTime = new Date(now.getTime() + nigeriaOffset * 60 * 1000)
 
-      // Calculate 24 hours ago in South Africa time
-      const twentyFourHoursAgo = new Date(saTime.getTime() - 24 * 60 * 60 * 1000)
+      // Calculate 24 hours ago in Nigeria time
+      const twentyFourHoursAgo = new Date(nigeriaTime.getTime() - 24 * 60 * 60 * 1000)
 
       console.log("[v0] Current UTC time:", now.toISOString())
-      console.log("[v0] SA Time:", saTime.toISOString())
-      console.log("[v0] 24 hours ago (SA):", twentyFourHoursAgo.toISOString())
+      console.log("[v0] Nigeria Time:", nigeriaTime.toISOString())
+      console.log("[v0] 24 hours ago (Nigeria):", twentyFourHoursAgo.toISOString())
 
       // Check for any existing completion for this user and task (not just recent ones)
       const { data: existingCompletion, error: checkError } = await supabase
@@ -258,7 +248,7 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
       if (existingCompletion) {
         // Check if the existing completion is within the last 24 hours
         const completionTime = new Date(existingCompletion.completed_at)
-        const timeDiff = saTime.getTime() - completionTime.getTime()
+        const timeDiff = nigeriaTime.getTime() - completionTime.getTime()
         const hoursDiff = timeDiff / (1000 * 60 * 60)
 
         console.log("[v0] Found existing completion at:", existingCompletion.completed_at)
@@ -455,7 +445,7 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
             <h2 className="text-2xl font-bold text-green-900 mb-2">Thank You!</h2>
             <p className="text-green-700 mb-2">Your survey has been completed successfully.</p>
             <p className="text-green-600 font-medium mb-4">
-              We appreciate your valuable contribution to South African research!
+              We appreciate your valuable contribution to Nigerian research!
             </p>
             <div className="flex items-center justify-center space-x-2 mb-6">
               <DollarSign className="w-6 h-6 text-green-600" />

@@ -43,7 +43,7 @@ export default function ProfileManagement({ user, profile }: ProfileManagementPr
             <div className="space-y-2">
               <label className="text-sm font-medium text-blue-900">Country</label>
               <Input
-                defaultValue={profile?.country || "South Africa"}
+                defaultValue={profile?.country || "Nigeria"}
                 className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>

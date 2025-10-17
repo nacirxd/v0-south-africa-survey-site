@@ -17,9 +17,9 @@ const roboto = Roboto({
 })
 
 export const metadata: Metadata = {
-  title: "SA Survey Rewards - Earn Dollars for South African Surveys",
+  title: "Nigeria Survey Rewards - Earn Dollars for Nigerian Surveys",
   description:
-    "Professional survey platform focused on South Africa. Earn $8-12 daily by completing simple surveys about South African culture, economy, and lifestyle.",
+    "Professional survey platform focused on Nigeria. Earn $8-12 daily by completing simple surveys about Nigerian culture, economy, and lifestyle.",
   generator: "v0.app",
 }
 
