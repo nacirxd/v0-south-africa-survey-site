@@ -1,25 +1,23 @@
 "use client"
 
-import { useActionState } from "react"
-import { useFormStatus } from "react-dom"
+import type React from "react"
+
+import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
 import { signUp } from "@/lib/actions"
 
-function SubmitButton() {
-  const { pending } = useFormStatus()
-
+function SubmitButton({ isPending }: { isPending: boolean }) {
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={isPending}
       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
     >
-      {pending ? (
+      {isPending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Creating account...
@@ -32,8 +30,19 @@ function SubmitButton() {
 }
 
 export default function SignUpForm() {
-  const [state, formAction] = useActionState(signUp, null)
+  const [state, setState] = useState<{ error?: string; success?: string } | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+
+    startTransition(async () => {
+      const result = await signUp(null, formData)
+      setState(result)
+    })
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -49,7 +58,7 @@ export default function SignUpForm() {
           <CardDescription className="text-blue-700">Start earning $8-12 daily with Nigerian surveys</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {state?.error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {state.error}
@@ -118,7 +127,7 @@ export default function SignUpForm() {
               </div>
             </div>
 
-            <SubmitButton />
+            <SubmitButton isPending={isPending} />
 
             <div className="text-center text-blue-700">
               Already have an account?{" "}

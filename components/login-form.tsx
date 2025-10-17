@@ -1,26 +1,24 @@
 "use client"
 
-import { useActionState } from "react"
-import { useFormStatus } from "react-dom"
+import type React from "react"
+
+import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 import { signIn } from "@/lib/actions"
 
-function SubmitButton() {
-  const { pending } = useFormStatus()
-
+function SubmitButton({ isPending }: { isPending: boolean }) {
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={isPending}
       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
     >
-      {pending ? (
+      {isPending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Signing in...
@@ -34,14 +32,23 @@ function SubmitButton() {
 
 export default function LoginForm() {
   const router = useRouter()
-  const [state, formAction] = useActionState(signIn, null)
+  const [state, setState] = useState<{ error?: string; success?: boolean } | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (state?.success) {
-      router.push("/dashboard")
-    }
-  }, [state, router])
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+
+    startTransition(async () => {
+      const result = await signIn(null, formData)
+      setState(result)
+
+      if (result?.success) {
+        router.push("/dashboard")
+      }
+    })
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -57,7 +64,7 @@ export default function LoginForm() {
           <CardDescription className="text-blue-700">Sign in to continue earning with Nigerian surveys</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {state?.error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {state.error}
@@ -101,7 +108,7 @@ export default function LoginForm() {
               </div>
             </div>
 
-            <SubmitButton />
+            <SubmitButton isPending={isPending} />
 
             <div className="text-center text-blue-700">
               Don't have an account?{" "}
