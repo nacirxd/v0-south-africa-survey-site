@@ -20,17 +20,17 @@ interface Task {
 
 interface DailyTasksListProps {
   userId: string
+  initialCompletedTaskIds: string[]
 }
 
-export default function DailyTasksList({ userId }: DailyTasksListProps) {
+export default function DailyTasksList({ userId, initialCompletedTaskIds }: DailyTasksListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set())
+  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set(initialCompletedTaskIds))
   const [loading, setLoading] = useState(true)
   const [currentDay, setCurrentDay] = useState<number>(-1)
 
   useEffect(() => {
     fetchTasks()
-    fetchCompletedTasks()
 
     const interval = setInterval(() => {
       const nigeriaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" }))
@@ -39,10 +39,10 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
       if (currentDay !== -1 && currentDay !== dayOfWeek) {
         console.log("[v0] Day changed from", currentDay, "to", dayOfWeek, "- refreshing tasks")
         fetchTasks()
-        fetchCompletedTasks()
+        window.location.reload()
       }
       setCurrentDay(dayOfWeek)
-    }, 60000) // Check every minute
+    }, 60000)
 
     return () => clearInterval(interval)
   }, [userId, currentDay])
@@ -55,7 +55,7 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
 
       const today = new Date()
       const nigeriaTime = new Date(today.toLocaleString("en-US", { timeZone: "Africa/Lagos" }))
-      const dayOfWeek = nigeriaTime.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const dayOfWeek = nigeriaTime.getDay()
 
       setTasks([])
       setLoading(true)
@@ -85,7 +85,15 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         console.log("[v0] Nigeria time:", nigeriaTime.toLocaleString("en-ZA", { timeZone: "Africa/Lagos" }))
         console.log("[v0] Selected", rotatedTasks.length, "tasks for", dayNames[dayOfWeek], "(weekday", dayOfWeek, ")")
         console.log("[v0] Task IDs for today:", rotatedTasks.map((t) => t.id.slice(0, 8)).join(", "))
-        setTasks(rotatedTasks)
+
+        const sortedTasks = rotatedTasks.sort((a, b) => {
+          const aCompleted = completedTasks.has(a.id)
+          const bCompleted = completedTasks.has(b.id)
+          if (aCompleted === bCompleted) return 0
+          return aCompleted ? 1 : -1
+        })
+
+        setTasks(sortedTasks)
         setCurrentDay(dayOfWeek)
       } else {
         setTasks([])
@@ -98,41 +106,10 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
     }
   }
 
-  const fetchCompletedTasks = async () => {
-    try {
-      console.log("[v0] Checking completed tasks for user:", userId)
-
-      const supabase = createClient()
-
-      const nigeriaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" }))
-      const twentyFourHoursAgo = new Date(nigeriaTime.getTime() - 24 * 60 * 60 * 1000)
-
-      const { data: completions, error } = await supabase
-        .from("task_completions")
-        .select("task_id, completed_at")
-        .eq("user_id", userId)
-        .gte("completed_at", twentyFourHoursAgo.toISOString())
-
-      if (error) throw error
-
-      const completedIds = new Set<string>()
-      if (completions) {
-        completions.forEach((completion) => {
-          completedIds.add(completion.task_id)
-        })
-      }
-
-      console.log("[v0] Found", completedIds.size, "tasks completed in last 24 hours (Nigeria time)")
-      setCompletedTasks(completedIds)
-    } catch (error) {
-      console.error("Error fetching completed tasks:", error)
-    }
-  }
-
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        fetchCompletedTasks()
+        window.location.reload()
       }
     }
 
@@ -185,10 +162,7 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         <h1 className="text-2xl font-bold mb-2">Daily Tasks</h1>
         <p className="text-blue-100">Complete surveys about Nigeria. New tasks rotate weekly based on Nigerian time.</p>
         <Button
-          onClick={() => {
-            fetchTasks()
-            fetchCompletedTasks()
-          }}
+          onClick={() => window.location.reload()}
           variant="outline"
           size="sm"
           className="mt-2 text-blue-600 border-blue-300 hover:bg-blue-50"
@@ -210,10 +184,9 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         ) : (
           tasks.map((task) => {
             const isCompleted = completedTasks.has(task.id)
-            const isAvailable = !isCompleted
 
             return (
-              <Card key={task.id} className={`border-blue-200 ${isCompleted ? "opacity-60" : ""}`}>
+              <Card key={task.id} className={`border-blue-200 transition-opacity ${isCompleted ? "opacity-50" : ""}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -245,7 +218,10 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
                       <span>5 questions • ~3 minutes</span>
                     </div>
                     {isCompleted ? (
-                      <Button disabled className="bg-gray-400 cursor-not-allowed">
+                      <Button
+                        disabled
+                        className="bg-transparent border border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                      >
                         <CheckSquare className="w-4 h-4 mr-2" />
                         Completed
                       </Button>
