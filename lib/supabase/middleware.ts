@@ -2,12 +2,20 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
 export function isSupabaseConfigured() {
-  return (
-    typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
-    typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  console.log("[v0] Checking Supabase configuration:", {
+    hasUrl: !!url,
+    hasKey: !!key,
+    urlType: typeof url,
+    keyType: typeof key,
+  })
+
+  const isConfigured = !!url && url.length > 0 && !!key && key.length > 0
+  console.log("[v0] Supabase configured:", isConfigured)
+
+  return isConfigured
 }
 
 export async function updateSession(request: NextRequest) {
@@ -15,6 +23,8 @@ export async function updateSession(request: NextRequest) {
     console.warn("[v0] Supabase not configured, skipping auth middleware")
     return NextResponse.next({ request })
   }
+
+  console.log("[v0] Supabase configured, processing auth middleware")
 
   const supabaseResponse = NextResponse.next({
     request,
