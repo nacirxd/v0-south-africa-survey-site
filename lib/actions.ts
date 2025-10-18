@@ -54,6 +54,17 @@ export async function signIn(prevState: any, formData: FormData) {
     })
 
     if (error) {
+      if (error.message.includes("Invalid login credentials") || error.message.includes("invalid_credentials")) {
+        return {
+          error:
+            "Email or password is incorrect. Please check your credentials and try again, or sign up if you don't have an account yet.",
+        }
+      }
+
+      if (error.message.includes("Email not confirmed")) {
+        return { error: "Please verify your email address before logging in." }
+      }
+
       return { error: error.message }
     }
 
