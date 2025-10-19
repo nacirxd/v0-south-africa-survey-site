@@ -1,36 +1,8 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
-import { cookies, headers } from "next/headers"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
-
-async function createSupabaseClient() {
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get("sb-access-token")?.value
-
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : {},
-    },
-  })
-}
-
-function createAdminClient() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  })
-}
 
 // Sign in action
 export async function signIn(prevState: any, formData: FormData) {
@@ -45,7 +17,7 @@ export async function signIn(prevState: any, formData: FormData) {
     return { error: "Email and password are required" }
   }
 
-  const supabase = await createSupabaseClient()
+  const supabase = await createClient()
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -89,7 +61,7 @@ export async function signUp(prevState: any, formData: FormData) {
     return { error: "All fields are required" }
   }
 
-  const supabase = await createSupabaseClient()
+  const supabase = await createClient()
   const supabaseAdmin = createAdminClient()
 
   const headersList = await headers()
@@ -174,7 +146,7 @@ export async function signUp(prevState: any, formData: FormData) {
 
 // Sign out action
 export async function signOut() {
-  const supabase = await createSupabaseClient()
+  const supabase = await createClient()
   await supabase.auth.signOut()
   redirect("/auth/login")
 }
