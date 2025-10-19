@@ -1,53 +1,53 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { signIn } from "@/lib/actions"
-
-function SubmitButton({ isPending }: { isPending: boolean }) {
-  return (
-    <Button
-      type="submit"
-      disabled={isPending}
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
-    >
-      {isPending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Signing in...
-        </>
-      ) : (
-        "Sign In"
-      )}
-    </Button>
-  )
-}
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginForm() {
   const router = useRouter()
-  const [state, setState] = useState<{ error?: string; success?: boolean } | null>(null)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
+    const supabase = createClient()
+    setIsLoading(true)
+    setError(null)
 
-    startTransition(async () => {
-      const result = await signIn(null, formData)
-      setState(result)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      if (result?.success) {
-        window.location.href = "/dashboard"
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          setError("Email or password is incorrect. Please check your credentials and try again.")
+        } else if (error.message.includes("Email not confirmed")) {
+          setError("Please verify your email address before logging in.")
+        } else {
+          setError(error.message)
+        }
+        return
       }
-    })
+
+      router.push("/dashboard")
+      router.refresh()
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -61,14 +61,14 @@ export default function LoginForm() {
             <span className="text-xl font-bold text-blue-900">SA Survey Rewards</span>
           </div>
           <CardTitle className="text-2xl font-bold text-blue-900">Welcome Back</CardTitle>
-          <CardDescription className="text-blue-700">Sign in to continue earning with Nigerian surveys</CardDescription>
+          <CardDescription className="text-blue-700">
+            Sign in to continue earning with South African surveys
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {state?.error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {state.error}
-              </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
             )}
 
             <div className="space-y-4">
@@ -78,10 +78,11 @@ export default function LoginForm() {
                 </label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="you@example.com"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
@@ -92,9 +93,10 @@ export default function LoginForm() {
                 <div className="relative">
                   <Input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="border-blue-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
                   />
                   <button
@@ -108,7 +110,20 @@ export default function LoginForm() {
               </div>
             </div>
 
-            <SubmitButton isPending={isPending} />
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
 
             <div className="text-center text-blue-700">
               Don't have an account?{" "}
