@@ -36,16 +36,41 @@ export async function updateSession(request: NextRequest) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: {
       persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : {},
+      autoRefreshToken: true, // Enable auto refresh
     },
   })
+
+  if (refreshToken) {
+    try {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken || "",
+        refresh_token: refreshToken,
+      })
+
+      if (error) {
+        console.error("[v0] Error refreshing session:", error)
+        // Clear invalid tokens
+        supabaseResponse.cookies.delete("sb-access-token")
+        supabaseResponse.cookies.delete("sb-refresh-token")
+      } else if (data.session) {
+        // Update cookies with new tokens
+        supabaseResponse.cookies.set("sb-access-token", data.session.access_token, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        })
+        supabaseResponse.cookies.set("sb-refresh-token", data.session.refresh_token, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error setting session:", error)
+    }
+  }
 
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
