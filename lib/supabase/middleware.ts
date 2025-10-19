@@ -1,42 +1,28 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
-export function isSupabaseConfigured() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  console.log("[v0] Checking Supabase configuration:", {
-    hasUrl: !!url,
-    hasKey: !!key,
-    urlType: typeof url,
-    keyType: typeof key,
-  })
-
-  const isConfigured = !!url && url.length > 0 && !!key && key.length > 0
-  console.log("[v0] Supabase configured:", isConfigured)
-
-  return isConfigured
-}
-
 export async function updateSession(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    console.warn("[v0] Supabase not configured, skipping auth middleware")
-    return NextResponse.next({ request })
-  }
-
-  console.log("[v0] Supabase configured, processing auth middleware")
+  // Environment variables are configured in the project settings, so we can proceed directly
 
   const supabaseResponse = NextResponse.next({
     request,
   })
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("[v0] Supabase environment variables not available in this request")
+    return supabaseResponse
+  }
+
   const accessToken = request.cookies.get("sb-access-token")?.value
   const refreshToken = request.cookies.get("sb-refresh-token")?.value
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
       persistSession: false,
-      autoRefreshToken: true, // Enable auto refresh
+      autoRefreshToken: true,
     },
   })
 
@@ -83,13 +69,13 @@ export async function updateSession(request: NextRequest) {
       if (data.session) {
         supabaseResponse.cookies.set("sb-access-token", data.session.access_token, {
           path: "/",
-          maxAge: 60 * 60 * 24 * 7, // 7 days
+          maxAge: 60 * 60 * 24 * 7,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
         })
         supabaseResponse.cookies.set("sb-refresh-token", data.session.refresh_token, {
           path: "/",
-          maxAge: 60 * 60 * 24 * 7, // 7 days
+          maxAge: 60 * 60 * 24 * 7,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
         })
