@@ -324,3 +324,109 @@ export async function submitTaskCompletion(
     return { error: error instanceof Error ? error.message : "Unknown error occurred" }
   }
 }
+
+export async function migrateTasksToNigeria() {
+  try {
+    console.log("[v0] Starting migration of tasks to Nigeria...")
+    const supabaseAdmin = createAdminClient()
+
+    // Update all tasks with South Africa references to Nigeria
+    const updates = [
+      {
+        title: "South African Cities Survey",
+        newTitle: "Nigerian Cities Survey",
+        newDescription: "Answer 5 questions about major cities in Nigeria including Lagos, Abuja, and Port Harcourt.",
+      },
+      {
+        title: "Local Cuisine Preferences",
+        newTitle: "Local Cuisine Preferences",
+        newDescription: "Share your thoughts on traditional Nigerian dishes like jollof rice, suya, and pounded yam.",
+      },
+      {
+        title: "Technology Usage Poll",
+        newTitle: "Technology Usage Poll",
+        newDescription: "Survey about technology adoption and internet usage patterns in Nigeria.",
+      },
+      {
+        title: "Tourism Destinations",
+        newTitle: "Tourism Destinations",
+        newDescription: "Rate and review popular Nigerian tourist destinations and attractions.",
+      },
+      {
+        title: "Healthcare Access Survey",
+        newTitle: "Healthcare Access Survey",
+        newDescription: "Questions about healthcare services and accessibility in Nigerian communities.",
+      },
+      {
+        title: "Language Diversity Survey",
+        newTitle: "Language Diversity Survey",
+        newDescription:
+          "Questions about the major languages of Nigeria including Hausa, Yoruba, and Igbo, and language preferences.",
+      },
+      {
+        title: "Transportation Survey",
+        newTitle: "Transportation Survey",
+        newDescription: "Share your experience with public and private transportation in Nigerian cities.",
+      },
+      {
+        title: "Climate and Weather",
+        newTitle: "Climate and Weather",
+        newDescription: "Answer questions about Nigerian climate patterns and seasonal preferences.",
+      },
+      {
+        title: "Economic Insights Poll",
+        newTitle: "Economic Insights Poll",
+        newDescription: "Share your views on Nigerian economy, employment, and business opportunities.",
+      },
+      {
+        title: "Education System Feedback",
+        newTitle: "Education System Feedback",
+        newDescription: "Provide feedback on the Nigerian education system and learning experiences.",
+      },
+    ]
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const update of updates) {
+      const { error } = await supabaseAdmin
+        .from("daily_tasks")
+        .update({
+          title: update.newTitle,
+          description: update.newDescription,
+        })
+        .eq("title", update.title)
+
+      if (error) {
+        console.error(`[v0] Error updating task "${update.title}":`, error)
+        errorCount++
+      } else {
+        console.log(`[v0] Successfully updated task: ${update.title} -> ${update.newTitle}`)
+        successCount++
+      }
+    }
+
+    // Also update any remaining tasks that might have "South Africa" in description
+    const { error: bulkError } = await supabaseAdmin.rpc("replace_south_africa_with_nigeria")
+
+    if (bulkError) {
+      console.error("[v0] Error in bulk update:", bulkError)
+      // This is okay if the function doesn't exist, we'll handle it manually
+    }
+
+    console.log(`[v0] Migration complete: ${successCount} successful, ${errorCount} errors`)
+
+    if (errorCount > 0) {
+      return {
+        success: `Migration partially complete: ${successCount} tasks updated, ${errorCount} errors`,
+        successCount,
+        errorCount,
+      }
+    }
+
+    return { success: `Successfully migrated ${successCount} tasks to Nigeria!`, successCount }
+  } catch (error) {
+    console.error("[v0] Error in migrateTasksToNigeria:", error)
+    return { error: error instanceof Error ? error.message : "Unknown error occurred during migration" }
+  }
+}

@@ -2,6 +2,7 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DailyTasksList from "@/components/daily-tasks-list"
+import MigrateTasksButton from "@/components/migrate-tasks-button"
 
 export const dynamic = "force-dynamic"
 
@@ -38,6 +39,9 @@ export default async function TasksPage() {
 
   return (
     <DashboardLayout user={user} profile={profile}>
+      <div className="mb-4">
+        <MigrateTasksButton />
+      </div>
       <DailyTasksList userId={user.id} initialCompletedTaskIds={completedTaskIds} />
     </DashboardLayout>
   )
