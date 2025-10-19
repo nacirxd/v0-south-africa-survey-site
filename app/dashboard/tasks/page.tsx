@@ -1,4 +1,4 @@
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DailyTasksList from "@/components/daily-tasks-list"
@@ -7,14 +7,6 @@ import MigrateTasksButton from "@/components/migrate-tasks-button"
 export const dynamic = "force-dynamic"
 
 export default async function TasksPage() {
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <h1 className="text-2xl font-bold mb-4 text-foreground">Connect Supabase to get started</h1>
-      </div>
-    )
-  }
-
   const supabase = await createClient()
   const {
     data: { user },

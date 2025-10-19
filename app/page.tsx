@@ -6,14 +6,6 @@ import { DollarSign, Globe, Shield } from "lucide-react"
 import Link from "next/link"
 
 export default async function HomePage() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <h1 className="text-2xl font-bold mb-4 text-foreground">Connect Supabase to get started</h1>
-      </div>
-    )
-  }
-
   const supabase = await createClient()
   const {
     data: { session },
