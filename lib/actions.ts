@@ -68,22 +68,6 @@ export async function signIn(prevState: any, formData: FormData) {
       return { error: error.message }
     }
 
-    if (data.session) {
-      const cookieStore = await cookies()
-      cookieStore.set("sb-access-token", data.session.access_token, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      })
-      cookieStore.set("sb-refresh-token", data.session.refresh_token, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      })
-    }
-
     return { success: true }
   } catch (error) {
     console.error("Login error:", error)
@@ -191,13 +175,7 @@ export async function signUp(prevState: any, formData: FormData) {
 // Sign out action
 export async function signOut() {
   const supabase = await createSupabaseClient()
-
   await supabase.auth.signOut()
-
-  const cookieStore = await cookies()
-  cookieStore.delete("sb-access-token")
-  cookieStore.delete("sb-refresh-token")
-
   redirect("/auth/login")
 }
 

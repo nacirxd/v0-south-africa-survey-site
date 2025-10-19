@@ -45,7 +45,7 @@ export default function LoginForm() {
       setState(result)
 
       if (result?.success) {
-        router.push("/dashboard")
+        window.location.href = "/dashboard"
       }
     })
   }
