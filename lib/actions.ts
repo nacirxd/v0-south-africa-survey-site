@@ -4,6 +4,8 @@ import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
+// Authentication and task management server actions
+
 // Sign in action
 export async function signIn(prevState: any, formData: FormData) {
   if (!formData) {
