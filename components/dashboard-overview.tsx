@@ -19,7 +19,7 @@ export default function DashboardOverview({ stats }: DashboardOverviewProps) {
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Dashboard Overview</h1>
         <p className="text-blue-100">
-          Track your earnings and complete daily tasks to maximize your income from South African surveys.
+          Track your earnings and complete daily tasks to maximize your income from Nigerian surveys.
         </p>
       </div>
 
@@ -116,7 +116,7 @@ export default function DashboardOverview({ stats }: DashboardOverviewProps) {
             </div>
             <div className="pt-2 border-t border-blue-100">
               <p className="text-xs text-blue-600">
-                Complete surveys about South African culture, economy, and lifestyle to earn USD.
+                Complete surveys about Nigerian culture, economy, and lifestyle to earn USD.
               </p>
             </div>
           </CardContent>

@@ -44,13 +44,8 @@ export default function HistoryAndWithdrawals({
   const MINIMUM_WITHDRAWAL = 250
 
   const paymentMethods = [
-    { value: "eft", label: "EFT - Electronic Funds Transfer", icon: Building2 },
-    { value: "capitec", label: "Capitec Bank", icon: Building2 },
-    { value: "fnb", label: "First National Bank (FNB)", icon: Building2 },
-    { value: "standard", label: "Standard Bank", icon: Building2 },
-    { value: "absa", label: "ABSA Bank", icon: Building2 },
-    { value: "nedbank", label: "Nedbank", icon: Building2 },
-    { value: "mtn_money", label: "MTN Money", icon: Smartphone },
+    { value: "bank_transfer", label: "Bank Transfer", icon: Building2 },
+    { value: "mobile_money", label: "Mobile Money", icon: Smartphone },
   ]
 
   const handleWithdrawalSubmit = async (e: React.FormEvent) => {
@@ -102,14 +97,14 @@ export default function HistoryAndWithdrawals({
   const renderPaymentFields = () => {
     if (!paymentMethod) return null
 
-    if (paymentMethod === "mtn_money") {
+    if (paymentMethod === "mobile_money") {
       return (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="mobileNumber">MTN Mobile Number</Label>
+            <Label htmlFor="mobileNumber">Mobile Number</Label>
             <Input
               id="mobileNumber"
-              placeholder="e.g., +27 82 123 4567"
+              placeholder="e.g., +234 801 234 5678"
               value={paymentDetails.mobileNumber}
               onChange={(e) => setPaymentDetails({ ...paymentDetails, mobileNumber: e.target.value })}
               required
@@ -175,7 +170,7 @@ export default function HistoryAndWithdrawals({
             <CardHeader>
               <CardTitle className="text-blue-900">Request Withdrawal</CardTitle>
               <CardDescription className="text-blue-700">
-                Withdraw your available balance using South African payment methods.
+                Withdraw your available balance using Nigerian payment methods.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -210,7 +205,7 @@ export default function HistoryAndWithdrawals({
                     <Label htmlFor="paymentMethod">Payment Method</Label>
                     <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a South African payment method" />
+                        <SelectValue placeholder="Select a Nigerian payment method" />
                       </SelectTrigger>
                       <SelectContent>
                         {paymentMethods.map((method) => {
