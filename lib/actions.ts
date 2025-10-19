@@ -327,10 +327,23 @@ export async function submitTaskCompletion(
 
 export async function migrateTasksToNigeria() {
   try {
-    console.log("[v0] Starting migration of tasks to Nigeria...")
+    console.log("[v0] Starting migration of tasks and profiles to Nigeria...")
     const supabaseAdmin = createAdminClient()
 
-    // First, get all tasks to see what we're working with
+    console.log("[v0] Updating user profiles...")
+    const { data: updatedProfiles, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ country: "Nigeria" })
+      .or("country.eq.South Africa,country.is.null")
+      .select()
+
+    if (profileError) {
+      console.error("[v0] Error updating profiles:", profileError)
+    } else {
+      console.log(`[v0] Updated ${updatedProfiles?.length || 0} user profiles to Nigeria`)
+    }
+
+    // Now update tasks
     const { data: allTasks, error: fetchError } = await supabaseAdmin
       .from("daily_tasks")
       .select("id, title, description")
@@ -391,17 +404,20 @@ export async function migrateTasksToNigeria() {
       }
     }
 
-    console.log(`[v0] Migration complete: ${successCount} successful, ${errorCount} errors`)
+    console.log(`[v0] Migration complete: ${successCount} tasks updated, ${errorCount} errors`)
 
     if (errorCount > 0) {
       return {
-        success: `Migration partially complete: ${successCount} tasks updated, ${errorCount} errors`,
+        success: `Migration complete: ${successCount} tasks and ${updatedProfiles?.length || 0} profiles updated, ${errorCount} errors`,
         successCount,
         errorCount,
       }
     }
 
-    return { success: `Successfully migrated ${successCount} tasks to Nigeria!`, successCount }
+    return {
+      success: `Successfully migrated ${successCount} tasks and ${updatedProfiles?.length || 0} profiles to Nigeria!`,
+      successCount,
+    }
   } catch (error) {
     console.error("[v0] Error in migrateTasksToNigeria:", error)
     return { error: error instanceof Error ? error.message : "Unknown error occurred during migration" }
