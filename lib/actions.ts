@@ -330,88 +330,65 @@ export async function migrateTasksToNigeria() {
     console.log("[v0] Starting migration of tasks to Nigeria...")
     const supabaseAdmin = createAdminClient()
 
-    // Update all tasks with South Africa references to Nigeria
-    const updates = [
-      {
-        title: "South African Cities Survey",
-        newTitle: "Nigerian Cities Survey",
-        newDescription: "Answer 5 questions about major cities in Nigeria including Lagos, Abuja, and Port Harcourt.",
-      },
-      {
-        title: "Local Cuisine Preferences",
-        newTitle: "Local Cuisine Preferences",
-        newDescription: "Share your thoughts on traditional Nigerian dishes like jollof rice, suya, and pounded yam.",
-      },
-      {
-        title: "Technology Usage Poll",
-        newTitle: "Technology Usage Poll",
-        newDescription: "Survey about technology adoption and internet usage patterns in Nigeria.",
-      },
-      {
-        title: "Tourism Destinations",
-        newTitle: "Tourism Destinations",
-        newDescription: "Rate and review popular Nigerian tourist destinations and attractions.",
-      },
-      {
-        title: "Healthcare Access Survey",
-        newTitle: "Healthcare Access Survey",
-        newDescription: "Questions about healthcare services and accessibility in Nigerian communities.",
-      },
-      {
-        title: "Language Diversity Survey",
-        newTitle: "Language Diversity Survey",
-        newDescription:
-          "Questions about the major languages of Nigeria including Hausa, Yoruba, and Igbo, and language preferences.",
-      },
-      {
-        title: "Transportation Survey",
-        newTitle: "Transportation Survey",
-        newDescription: "Share your experience with public and private transportation in Nigerian cities.",
-      },
-      {
-        title: "Climate and Weather",
-        newTitle: "Climate and Weather",
-        newDescription: "Answer questions about Nigerian climate patterns and seasonal preferences.",
-      },
-      {
-        title: "Economic Insights Poll",
-        newTitle: "Economic Insights Poll",
-        newDescription: "Share your views on Nigerian economy, employment, and business opportunities.",
-      },
-      {
-        title: "Education System Feedback",
-        newTitle: "Education System Feedback",
-        newDescription: "Provide feedback on the Nigerian education system and learning experiences.",
-      },
-    ]
+    // First, get all tasks to see what we're working with
+    const { data: allTasks, error: fetchError } = await supabaseAdmin
+      .from("daily_tasks")
+      .select("id, title, description")
+
+    if (fetchError) {
+      console.error("[v0] Error fetching tasks:", fetchError)
+      return { error: `Failed to fetch tasks: ${fetchError.message}` }
+    }
+
+    console.log(`[v0] Found ${allTasks?.length || 0} tasks to process`)
 
     let successCount = 0
     let errorCount = 0
 
-    for (const update of updates) {
-      const { error } = await supabaseAdmin
-        .from("daily_tasks")
-        .update({
-          title: update.newTitle,
-          description: update.newDescription,
-        })
-        .eq("title", update.title)
+    // Update each task that contains "South Africa" references
+    for (const task of allTasks || []) {
+      let needsUpdate = false
+      let newTitle = task.title
+      let newDescription = task.description
 
-      if (error) {
-        console.error(`[v0] Error updating task "${update.title}":`, error)
-        errorCount++
-      } else {
-        console.log(`[v0] Successfully updated task: ${update.title} -> ${update.newTitle}`)
-        successCount++
+      // Replace "South Africa" with "Nigeria" in title
+      if (task.title.includes("South Africa") || task.title.includes("south africa")) {
+        newTitle = task.title.replace(/South Africa/gi, "Nigeria").replace(/South African/gi, "Nigerian")
+        needsUpdate = true
       }
-    }
 
-    // Also update any remaining tasks that might have "South Africa" in description
-    const { error: bulkError } = await supabaseAdmin.rpc("replace_south_africa_with_nigeria")
+      // Replace "South Africa" with "Nigeria" in description
+      if (task.description.includes("South Africa") || task.description.includes("south africa")) {
+        newDescription = task.description
+          .replace(/South Africa/gi, "Nigeria")
+          .replace(/South African/gi, "Nigerian")
+          .replace(/Cape Town/gi, "Lagos")
+          .replace(/Johannesburg/gi, "Abuja")
+          .replace(/Durban/gi, "Port Harcourt")
+          .replace(/bobotie/gi, "jollof rice")
+          .replace(/biltong/gi, "suya")
+          .replace(/boerewors/gi, "pounded yam")
+          .replace(/11 official languages/gi, "major languages including Hausa, Yoruba, and Igbo")
+        needsUpdate = true
+      }
 
-    if (bulkError) {
-      console.error("[v0] Error in bulk update:", bulkError)
-      // This is okay if the function doesn't exist, we'll handle it manually
+      if (needsUpdate) {
+        const { error: updateError } = await supabaseAdmin
+          .from("daily_tasks")
+          .update({
+            title: newTitle,
+            description: newDescription,
+          })
+          .eq("id", task.id)
+
+        if (updateError) {
+          console.error(`[v0] Error updating task "${task.title}":`, updateError)
+          errorCount++
+        } else {
+          console.log(`[v0] Successfully updated task: ${task.title}`)
+          successCount++
+        }
+      }
     }
 
     console.log(`[v0] Migration complete: ${successCount} successful, ${errorCount} errors`)
