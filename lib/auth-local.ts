@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs"
 import { randomBytes } from "crypto"
 import { cookies } from "next/headers"
-import { getDb } from "./db"
 
 const SESSION_COOKIE_NAME = "session_id"
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -17,15 +16,41 @@ function generateId() {
   return randomBytes(16).toString("hex")
 }
 
+async function getDbAdapter() {
+  try {
+    const { getDb } = await import("./db")
+    return {
+      type: "sqlite" as const,
+      db: getDb(),
+    }
+  } catch (error) {
+    console.log("[v0] Using fallback localStorage database")
+    const { fallbackDb, initializeFallbackDb } = await import("./db-fallback")
+    initializeFallbackDb()
+    return {
+      type: "fallback" as const,
+      db: fallbackDb,
+    }
+  }
+}
+
 export async function createSession(userId: string) {
-  const db = getDb()
+  const adapter = await getDbAdapter()
   const sessionId = generateId()
   const expiresAt = new Date(Date.now() + SESSION_DURATION).toISOString()
 
-  db.prepare(`
+  if (adapter.type === "sqlite") {
+    adapter.db
+      .prepare(
+        `
     INSERT INTO sessions (id, user_id, expires_at)
     VALUES (?, ?, ?)
-  `).run(sessionId, userId, expiresAt)
+  `,
+      )
+      .run(sessionId, userId, expiresAt)
+  } else {
+    adapter.db.sessions.create(sessionId, userId, expiresAt)
+  }
 
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
@@ -45,34 +70,56 @@ export async function getCurrentUser(): Promise<User | null> {
 
   if (!sessionId) return null
 
-  const db = getDb()
+  const adapter = await getDbAdapter()
 
-  // Limpar sessões expiradas
-  db.prepare("DELETE FROM sessions WHERE expires_at < ?").run(new Date().toISOString())
+  if (adapter.type === "sqlite") {
+    adapter.db.prepare("DELETE FROM sessions WHERE expires_at < ?").run(new Date().toISOString())
 
-  const session = db
-    .prepare(`
-    SELECT s.user_id, u.email, u.full_name, u.country
-    FROM sessions s
-    JOIN users u ON s.user_id = u.id
-    WHERE s.id = ? AND s.expires_at > ?
-  `)
-    .get(sessionId, new Date().toISOString()) as any
+    const session = adapter.db
+      .prepare(
+        `
+      SELECT s.user_id, u.email, u.full_name, u.country
+      FROM sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.id = ? AND s.expires_at > ?
+    `,
+      )
+      .get(sessionId, new Date().toISOString()) as any
 
-  if (!session) return null
+    if (!session) return null
 
-  return {
-    id: session.user_id,
-    email: session.email,
-    full_name: session.full_name,
-    country: session.country,
+    return {
+      id: session.user_id,
+      email: session.email,
+      full_name: session.full_name,
+      country: session.country,
+    }
+  } else {
+    const session = adapter.db.sessions.findById(sessionId)
+    if (!session) return null
+
+    const user = adapter.db.users.findById(session.user_id)
+    if (!user) return null
+
+    return {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      country: user.country,
+    }
   }
 }
 
 export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
-  const db = getDb()
+  const adapter = await getDbAdapter()
 
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any
+  let user: any
+
+  if (adapter.type === "sqlite") {
+    user = adapter.db.prepare("SELECT * FROM users WHERE email = ?").get(email)
+  } else {
+    user = adapter.db.users.findByEmail(email)
+  }
 
   if (!user) {
     return { success: false, error: "Invalid email or password" }
@@ -94,33 +141,61 @@ export async function signUp(
   password: string,
   fullName: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const db = getDb()
+  const adapter = await getDbAdapter()
 
-  // Verificar se email já existe
-  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email)
+  let existing: any
+
+  if (adapter.type === "sqlite") {
+    existing = adapter.db.prepare("SELECT id FROM users WHERE email = ?").get(email)
+  } else {
+    existing = adapter.db.users.findByEmail(email)
+  }
 
   if (existing) {
     return { success: false, error: "Email already registered" }
   }
 
-  // Hash da senha
   const passwordHash = await bcrypt.hash(password, 10)
   const userId = generateId()
 
   try {
-    // Criar usuário
-    db.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name)
-      VALUES (?, ?, ?, ?)
-    `).run(userId, email, passwordHash, fullName)
+    if (adapter.type === "sqlite") {
+      adapter.db
+        .prepare(
+          `
+        INSERT INTO users (id, email, password_hash, full_name)
+        VALUES (?, ?, ?, ?)
+      `,
+        )
+        .run(userId, email, passwordHash, fullName)
 
-    // Criar perfil
-    db.prepare(`
-      INSERT INTO profiles (user_id)
-      VALUES (?)
-    `).run(userId)
+      adapter.db
+        .prepare(
+          `
+        INSERT INTO profiles (user_id)
+        VALUES (?)
+      `,
+        )
+        .run(userId)
+    } else {
+      adapter.db.users.create({
+        id: userId,
+        email,
+        password_hash: passwordHash,
+        full_name: fullName,
+        country: "South Africa",
+        created_at: new Date().toISOString(),
+      })
 
-    // Criar sessão
+      adapter.db.profiles.create({
+        user_id: userId,
+        total_earnings: 0,
+        available_balance: 0,
+        withdrawn_amount: 0,
+        updated_at: new Date().toISOString(),
+      })
+    }
+
     await createSession(userId)
 
     return { success: true }
@@ -135,8 +210,13 @@ export async function signOut() {
   const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
   if (sessionId) {
-    const db = getDb()
-    db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId)
+    const adapter = await getDbAdapter()
+
+    if (adapter.type === "sqlite") {
+      adapter.db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId)
+    } else {
+      adapter.db.sessions.delete(sessionId)
+    }
   }
 
   cookieStore.delete(SESSION_COOKIE_NAME)
