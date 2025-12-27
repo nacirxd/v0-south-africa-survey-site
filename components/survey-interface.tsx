@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, ArrowRight, CheckCircle, DollarSign, MapPin } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { isTaskCompletedToday } from "@/lib/balance-utils"
 
 interface SurveyQuestion {
   id: string
@@ -232,20 +233,17 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
 
       const user = JSON.parse(userStr)
 
+      if (isTaskCompletedToday(user.id, task.id)) {
+        alert("You have already completed this task today. Please try again tomorrow!")
+        router.push("/dashboard/tasks")
+        return
+      }
+
       // Get existing completions
       const completionsStr = localStorage.getItem("survey_completions")
       const completions = completionsStr ? JSON.parse(completionsStr) : []
 
-      // Check if already completed in last 24 hours
       const now = Date.now()
-      const oneDayAgo = now - 24 * 60 * 60 * 1000
-      const recentCompletion = completions.find(
-        (c: any) => c.userId === user.id && c.taskId === task.id && c.completedAt > oneDayAgo,
-      )
-
-      if (recentCompletion) {
-        throw new Error("Task already completed in the last 24 hours")
-      }
 
       // Add new completion
       const newCompletion = {

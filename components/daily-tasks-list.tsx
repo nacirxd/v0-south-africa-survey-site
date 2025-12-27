@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CheckSquare, Clock, DollarSign, MapPin, Play } from "lucide-react"
 import Link from "next/link"
+import { getTasksCompletedToday } from "@/lib/balance-utils"
 
 interface Task {
   id: string
@@ -23,7 +24,7 @@ interface DailyTasksListProps {
 
 export default function DailyTasksList({ userId }: DailyTasksListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set())
+  const [completedToday, setCompletedToday] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -39,18 +40,13 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
 
       console.log("[v0] Loaded tasks from localStorage:", allTasks.length)
 
-      // Load completed tasks for this user
-      const completionsJson = localStorage.getItem("survey_completions") || "[]"
-      const completions = JSON.parse(completionsJson)
-      const userCompletions = completions.filter((c: any) => c.user_id === userId).map((c: any) => c.task_id)
+      const todayTaskIds = getTasksCompletedToday(userId)
+      console.log("[v0] Tasks completed today:", todayTaskIds.length)
 
-      console.log("[v0] User completed tasks:", userCompletions.length)
-
-      // Filter active tasks
       const activeTasks = allTasks.filter((task: Task) => task.is_active)
 
       setTasks(activeTasks)
-      setCompletedTasks(new Set(userCompletions))
+      setCompletedToday(new Set(todayTaskIds))
     } catch (error) {
       console.error("[v0] Error fetching tasks:", error)
       setTasks([])
@@ -99,7 +95,6 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Daily Tasks</h1>
         <p className="text-blue-100">Complete surveys about South Africa. New tasks rotate daily.</p>
@@ -113,7 +108,6 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         </Button>
       </div>
 
-      {/* Tasks Grid */}
       <div className="grid gap-6">
         {tasks.length === 0 ? (
           <Card className="border-blue-200">
@@ -125,20 +119,20 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
           </Card>
         ) : (
           tasks.map((task) => {
-            const isCompleted = completedTasks.has(task.id)
+            const isCompletedToday = completedToday.has(task.id)
 
             return (
-              <Card key={task.id} className={`border-blue-200 ${isCompleted ? "opacity-60" : ""}`}>
+              <Card key={task.id} className={`border-blue-200 ${isCompletedToday ? "opacity-60" : ""}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
                         <MapPin className="w-4 h-4 text-blue-600" />
                         <Badge className={getCategoryColor(task.category)}>{task.category}</Badge>
-                        {isCompleted && (
+                        {isCompletedToday && (
                           <Badge className="bg-green-100 text-green-800">
                             <CheckSquare className="w-3 h-3 mr-1" />
-                            Completed
+                            Completed Today
                           </Badge>
                         )}
                       </div>
@@ -156,13 +150,19 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 text-sm text-blue-600">
-                      <span>Daily rotation • Fresh tasks every day</span>
-                      <span>5 questions • ~3 minutes</span>
+                      {isCompletedToday ? (
+                        <span className="text-orange-600 font-medium">Available again tomorrow</span>
+                      ) : (
+                        <>
+                          <span>Daily rotation • Fresh tasks every day</span>
+                          <span>5 questions • ~3 minutes</span>
+                        </>
+                      )}
                     </div>
-                    {isCompleted ? (
+                    {isCompletedToday ? (
                       <Button disabled className="bg-gray-400 cursor-not-allowed">
                         <CheckSquare className="w-4 h-4 mr-2" />
-                        Completed
+                        Completed Today
                       </Button>
                     ) : (
                       <Link href={`/dashboard/tasks/${task.id}`}>
