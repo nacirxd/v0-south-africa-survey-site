@@ -9,7 +9,7 @@ import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import bcrypt from "bcryptjs"
+import { simpleHash } from "@/utils/hash"
 
 export default function LoginForm() {
   const router = useRouter()
@@ -52,10 +52,10 @@ export default function LoginForm() {
 
       console.log("[v0] User found, verifying password...")
 
-      // Verify password
-      const isValid = await bcrypt.compare(password, user.password)
+      // Use simple hash comparison for client-side
+      const passwordHash = await simpleHash(password)
 
-      if (!isValid) {
+      if (passwordHash !== user.password) {
         console.log("[v0] Invalid password")
         setError("Invalid email or password")
         setIsLoading(false)

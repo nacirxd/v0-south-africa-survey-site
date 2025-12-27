@@ -9,7 +9,7 @@ import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import bcrypt from "bcryptjs"
+import { simpleHash } from "@/utils/hash"
 
 export default function SignUpForm() {
   const router = useRouter()
@@ -58,8 +58,7 @@ export default function SignUpForm() {
         return
       }
 
-      // Hash password (simple client-side hash for demo)
-      const hashedPassword = await bcrypt.hash(password, 10)
+      const hashedPassword = await simpleHash(password)
 
       // Create new user
       const newUser = {
