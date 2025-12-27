@@ -5,27 +5,26 @@ import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, MapPin, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { signUp } from "@/lib/actions"
+import { useRouter } from "next/navigation"
 
-function SubmitButton({ isSubmitting, cooldownSeconds }: { isSubmitting: boolean; cooldownSeconds: number }) {
+function SubmitButton() {
   const { pending } = useFormStatus()
 
   return (
     <Button
       type="submit"
-      disabled={pending || isSubmitting || cooldownSeconds > 0}
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px] disabled:opacity-50 disabled:cursor-not-allowed"
+      disabled={pending}
+      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
     >
-      {pending || isSubmitting ? (
+      {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Creating account...
         </>
-      ) : cooldownSeconds > 0 ? (
-        `Wait ${cooldownSeconds}s before trying again`
       ) : (
         "Create Account"
       )}
@@ -34,63 +33,17 @@ function SubmitButton({ isSubmitting, cooldownSeconds }: { isSubmitting: boolean
 }
 
 export default function SignUpForm() {
+  const router = useRouter()
   const [state, formAction] = useFormState(signUp, null)
   const [showPassword, setShowPassword] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [cooldownSeconds, setCooldownSeconds] = useState(0)
-  const lastSubmitTime = useRef<number>(0)
-  const cooldownInterval = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    return () => {
-      if (cooldownInterval.current) {
-        clearInterval(cooldownInterval.current)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (cooldownSeconds > 0) {
-      cooldownInterval.current = setInterval(() => {
-        setCooldownSeconds((prev) => {
-          if (prev <= 1) {
-            if (cooldownInterval.current) {
-              clearInterval(cooldownInterval.current)
-            }
-            return 0
-          }
-          return prev - 1
-        })
+    if (state?.success) {
+      setTimeout(() => {
+        router.push("/dashboard")
       }, 1000)
     }
-
-    return () => {
-      if (cooldownInterval.current) {
-        clearInterval(cooldownInterval.current)
-      }
-    }
-  }, [cooldownSeconds])
-
-  const handleSubmit = async (formData: FormData) => {
-    const now = Date.now()
-    const cooldownTime = 10000 // 10 seconds
-
-    if (now - lastSubmitTime.current < cooldownTime) {
-      return
-    }
-
-    lastSubmitTime.current = now
-    setIsSubmitting(true)
-    setCooldownSeconds(10)
-
-    try {
-      await formAction(formData)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const showRateLimitWarning = state?.error?.includes("rate limit") || state?.error?.includes("too many")
+  }, [state, router])
 
   return (
     <div className="w-full max-w-md">
@@ -108,31 +61,16 @@ export default function SignUpForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleSubmit} className="space-y-6">
+          <form action={formAction} className="space-y-6">
             {state?.error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {state.error}
               </div>
             )}
 
-            {showRateLimitWarning && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <div>
-                  <strong>Rate limit protection:</strong> Please wait at least 10 seconds between signup attempts to
-                  avoid being temporarily blocked.
-                </div>
-              </div>
-            )}
-
             {state?.success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
                 {state.success}
-                <div className="mt-2">
-                  <Link href="/auth/login" className="text-blue-600 hover:text-blue-800 font-medium hover:underline">
-                    Click here to sign in →
-                  </Link>
-                </div>
               </div>
             )}
 
@@ -172,8 +110,9 @@ export default function SignUpForm() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Create a strong password"
+                    placeholder="Create a strong password (min 6 characters)"
                     required
+                    minLength={6}
                     className="border-blue-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
                   />
                   <button
@@ -187,7 +126,7 @@ export default function SignUpForm() {
               </div>
             </div>
 
-            <SubmitButton isSubmitting={isSubmitting} cooldownSeconds={cooldownSeconds} />
+            <SubmitButton />
 
             <div className="text-center text-blue-700">
               Already have an account?{" "}

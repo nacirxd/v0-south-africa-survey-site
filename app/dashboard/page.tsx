@@ -1,29 +1,20 @@
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DashboardOverview from "@/components/dashboard-overview"
 
 export default async function DashboardPage() {
-  if (!isSupabaseConfigured) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <h1 className="text-2xl font-bold mb-4 text-foreground">Connect Supabase to get started</h1>
-      </div>
-    )
-  }
-
-  // Get the user from the server
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Get the user from local auth
+  const user = await getCurrentUser()
 
   // If no user, redirect to login
   if (!user) {
     redirect("/auth/login")
   }
 
-  // Get user profile and stats
+  // Get user profile and stats from Supabase
+  const supabase = createClient()
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
   const southAfricaTime = new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" })
@@ -51,11 +42,10 @@ export default async function DashboardPage() {
 
   let availableTasksCount = 0
   if (allTasks && allTasks.length > 0) {
-    const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+    const dayOfWeek = today.getDay()
     const tasksPerDay = 10
     const totalTasks = allTasks.length
 
-    // Generate today's task selection using same algorithm
     const todayTasks = []
     for (let i = 0; i < tasksPerDay; i++) {
       const taskIndex = (dayOfWeek * tasksPerDay + i) % totalTasks
