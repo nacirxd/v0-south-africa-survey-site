@@ -101,10 +101,9 @@ export default function SignUpForm() {
       console.log("[v0] User created successfully:", newUser.id)
       setSuccess("Account created successfully! Redirecting...")
 
-      // Redirect to dashboard
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 1000)
+      // Redirect immediately to dashboard
+      router.push("/dashboard")
+      router.refresh()
     } catch (err: any) {
       console.error("[v0] Signup error:", err)
       setError(err.message || "Failed to create account")

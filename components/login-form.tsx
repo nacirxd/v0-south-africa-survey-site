@@ -70,8 +70,8 @@ export default function LoginForm() {
         JSON.stringify({ id: user.id, email: user.email, full_name: user.full_name }),
       )
 
-      // Redirect to dashboard
       router.push("/dashboard")
+      router.refresh()
     } catch (err: any) {
       console.error("[v0] Login error:", err)
       setError(err.message || "Failed to sign in")
