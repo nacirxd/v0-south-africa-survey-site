@@ -122,10 +122,15 @@ export async function signUp(prevState: any, formData: FormData) {
         data: {
           full_name: fullName.toString(),
         },
+        emailRedirectTo: `${origin}/auth/callback`,
       },
     })
 
     if (error) {
+      if (error.message.includes("email rate limit exceeded") || error.message.includes("Email rate limit exceeded")) {
+        return { error: "Too many signup attempts. Please try again in a few minutes." }
+      }
+
       if (
         error.message.includes("User already registered") ||
         error.message.includes("already been registered") ||
