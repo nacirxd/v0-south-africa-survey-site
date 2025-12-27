@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DashboardOverview from "@/components/dashboard-overview"
 import { Loader2 } from "lucide-react"
+import { initializeTasks } from "@/lib/seed-data"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -31,17 +32,25 @@ export default function DashboardPage() {
       console.log("[v0] User session found:", currentUser.email)
       setUser(currentUser)
 
+      initializeTasks()
+
       // Get user profile from localStorage
       const profilesJson = localStorage.getItem("survey_profiles") || "[]"
       const profiles = JSON.parse(profilesJson)
       const profile = profiles.find((p: any) => p.user_id === currentUser.id)
 
+      const tasksJson = localStorage.getItem("survey_tasks") || "[]"
+      const tasks = JSON.parse(tasksJson)
+      const completionsJson = localStorage.getItem("survey_completions") || "[]"
+      const completions = JSON.parse(completionsJson)
+      const userCompletions = completions.filter((c: any) => c.user_id === currentUser.id)
+
       if (profile) {
         setStats({
-          totalEarnings: profile.total_earnings || 0,
+          totalEarnings: profile.total_earned || 0,
           availableBalance: profile.available_balance || 0,
-          todayTasksCompleted: 0,
-          availableTasks: 10,
+          todayTasksCompleted: userCompletions.length,
+          availableTasks: tasks.filter((t: any) => t.is_active).length,
         })
       }
 

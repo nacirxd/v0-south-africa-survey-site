@@ -34,16 +34,23 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
     try {
       setLoading(true)
 
-      const response = await fetch("/api/tasks")
-      const data = await response.json()
+      const tasksJson = localStorage.getItem("survey_tasks") || "[]"
+      const allTasks = JSON.parse(tasksJson)
 
-      if (response.ok) {
-        setTasks(data.tasks || [])
-        setCompletedTasks(new Set(data.completedTaskIds || []))
-      } else {
-        console.error("[v0] Error fetching tasks:", data.error)
-        setTasks([])
-      }
+      console.log("[v0] Loaded tasks from localStorage:", allTasks.length)
+
+      // Load completed tasks for this user
+      const completionsJson = localStorage.getItem("survey_completions") || "[]"
+      const completions = JSON.parse(completionsJson)
+      const userCompletions = completions.filter((c: any) => c.user_id === userId).map((c: any) => c.task_id)
+
+      console.log("[v0] User completed tasks:", userCompletions.length)
+
+      // Filter active tasks
+      const activeTasks = allTasks.filter((task: Task) => task.is_active)
+
+      setTasks(activeTasks)
+      setCompletedTasks(new Set(userCompletions))
     } catch (error) {
       console.error("[v0] Error fetching tasks:", error)
       setTasks([])

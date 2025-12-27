@@ -10,6 +10,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { simpleHash } from "@/utils/hash"
+import { initializeTasks } from "@/lib/seed-data"
 
 export default function SignUpForm() {
   const router = useRouter()
@@ -97,6 +98,8 @@ export default function SignUpForm() {
         "survey_current_user",
         JSON.stringify({ id: newUser.id, email: newUser.email, full_name: newUser.full_name }),
       )
+
+      initializeTasks()
 
       console.log("[v0] User created successfully:", newUser.id)
       setSuccess("Account created successfully! Redirecting...")

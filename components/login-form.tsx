@@ -10,6 +10,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { simpleHash } from "@/utils/hash"
+import { initializeTasks } from "@/lib/seed-data"
 
 export default function LoginForm() {
   const router = useRouter()
@@ -69,6 +70,8 @@ export default function LoginForm() {
         "survey_current_user",
         JSON.stringify({ id: user.id, email: user.email, full_name: user.full_name }),
       )
+
+      initializeTasks()
 
       router.push("/dashboard")
       router.refresh()
