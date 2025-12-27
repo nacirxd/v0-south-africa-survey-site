@@ -12,28 +12,26 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const currentUserId = localStorage.getItem("currentUserId")
+    const currentUserJson = localStorage.getItem("survey_current_user")
 
-    if (!currentUserId) {
+    console.log("[v0] History page - checking auth:", currentUserJson)
+
+    if (!currentUserJson) {
+      console.log("[v0] No current user found, redirecting to login")
       router.push("/auth/login")
       return
     }
 
-    const users = JSON.parse(localStorage.getItem("survey_users") || "[]")
-    const foundUser = users.find((u: any) => u.id === currentUserId)
+    const currentUser = JSON.parse(currentUserJson)
+    console.log("[v0] Current user found:", currentUser.id)
 
-    if (!foundUser) {
-      router.push("/auth/login")
-      return
-    }
-
-    setUser(foundUser)
+    setUser(currentUser)
 
     // Load profile
     const profiles = JSON.parse(localStorage.getItem("survey_profiles") || "[]")
-    const userProfile = profiles.find((p: any) => p.user_id === foundUser.id) || {
-      user_id: foundUser.id,
-      full_name: foundUser.email.split("@")[0],
+    const userProfile = profiles.find((p: any) => p.user_id === currentUser.id) || {
+      user_id: currentUser.id,
+      full_name: currentUser.full_name,
       available_balance: 0,
       total_earned: 0,
     }
