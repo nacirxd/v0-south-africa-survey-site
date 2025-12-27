@@ -94,25 +94,6 @@ export async function signUp(prevState: any, formData: FormData) {
     },
   )
 
-  const supabaseAdmin = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // Ignore
-          }
-        },
-      },
-    },
-  )
-
   const headersList = headers()
   const host = headersList.get("host")
   const protocol = headersList.get("x-forwarded-proto") || "http"
@@ -134,14 +115,13 @@ export async function signUp(prevState: any, formData: FormData) {
       console.error("Error checking existing user:", checkError)
     }
 
-    const { data: signUpData, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
       options: {
         data: {
           full_name: fullName.toString(),
         },
-        emailRedirectTo: `${origin}/auth/callback`,
       },
     })
 
@@ -163,27 +143,6 @@ export async function signUp(prevState: any, formData: FormData) {
       }
 
       return { error: error.message }
-    }
-
-    if (signUpData.user) {
-      try {
-        await supabaseAdmin.auth.admin.updateUserById(signUpData.user.id, {
-          email_confirm: true,
-        })
-      } catch (confirmError) {
-        console.error("Error confirming email:", confirmError)
-      }
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.toString(),
-        password: password.toString(),
-      })
-
-      if (signInError) {
-        return { success: "Account created successfully! Please log in." }
-      }
-
-      return { success: "Account created successfully! Redirecting...", redirect: "/dashboard" }
     }
 
     return { success: "Account created successfully! You can now log in." }
