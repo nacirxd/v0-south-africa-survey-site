@@ -111,7 +111,9 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+  console.log("[v0] SignIn attempt for:", email)
   const adapter = await getDbAdapter()
+  console.log("[v0] Using adapter type:", adapter.type)
 
   let user: any
 
@@ -119,19 +121,24 @@ export async function signIn(email: string, password: string): Promise<{ success
     user = adapter.db.prepare("SELECT * FROM users WHERE email = ?").get(email)
   } else {
     user = adapter.db.users.findByEmail(email)
+    console.log("[v0] Found user in fallback:", user ? "yes" : "no")
   }
 
   if (!user) {
+    console.log("[v0] User not found")
     return { success: false, error: "Invalid email or password" }
   }
 
+  console.log("[v0] Comparing passwords...")
   const isValid = await bcrypt.compare(password, user.password_hash)
+  console.log("[v0] Password valid:", isValid)
 
   if (!isValid) {
     return { success: false, error: "Invalid email or password" }
   }
 
   await createSession(user.id)
+  console.log("[v0] Session created successfully")
 
   return { success: true }
 }
@@ -141,7 +148,9 @@ export async function signUp(
   password: string,
   fullName: string,
 ): Promise<{ success: boolean; error?: string }> {
+  console.log("[v0] SignUp attempt for:", email)
   const adapter = await getDbAdapter()
+  console.log("[v0] Using adapter type:", adapter.type)
 
   let existing: any
 
@@ -152,11 +161,13 @@ export async function signUp(
   }
 
   if (existing) {
+    console.log("[v0] Email already exists")
     return { success: false, error: "Email already registered" }
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
   const userId = generateId()
+  console.log("[v0] Creating user with ID:", userId)
 
   try {
     if (adapter.type === "sqlite") {
@@ -186,6 +197,7 @@ export async function signUp(
         country: "South Africa",
         created_at: new Date().toISOString(),
       })
+      console.log("[v0] User created in fallback DB")
 
       adapter.db.profiles.create({
         user_id: userId,
@@ -194,9 +206,11 @@ export async function signUp(
         withdrawn_amount: 0,
         updated_at: new Date().toISOString(),
       })
+      console.log("[v0] Profile created in fallback DB")
     }
 
     await createSession(userId)
+    console.log("[v0] Session created, signup complete")
 
     return { success: true }
   } catch (error) {

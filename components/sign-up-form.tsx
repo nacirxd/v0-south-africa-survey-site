@@ -1,49 +1,118 @@
 "use client"
 
-import { useFormState } from "react-dom"
-import { useFormStatus } from "react-dom"
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
-import { signUp } from "@/lib/actions"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-
-function SubmitButton() {
-  const { pending } = useFormStatus()
-
-  return (
-    <Button
-      type="submit"
-      disabled={pending}
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
-    >
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Creating account...
-        </>
-      ) : (
-        "Create Account"
-      )}
-    </Button>
-  )
-}
+import bcrypt from "bcryptjs"
 
 export default function SignUpForm() {
   const router = useRouter()
-  const [state, formAction] = useFormState(signUp, null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
-  useEffect(() => {
-    if (state?.success) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+    const fullName = formData.get("fullName") as string
+
+    console.log("[v0] Signup attempt:", { email, fullName })
+
+    try {
+      // Validate
+      if (!email || !password || !fullName) {
+        setError("All fields are required")
+        setIsLoading(false)
+        return
+      }
+
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters")
+        setIsLoading(false)
+        return
+      }
+
+      // Get existing users from localStorage
+      const usersJson = localStorage.getItem("survey_users") || "[]"
+      const users = JSON.parse(usersJson)
+
+      console.log("[v0] Existing users:", users.length)
+
+      // Check if user exists
+      if (users.find((u: any) => u.email === email)) {
+        setError("User already exists")
+        setIsLoading(false)
+        return
+      }
+
+      // Hash password (simple client-side hash for demo)
+      const hashedPassword = await bcrypt.hash(password, 10)
+
+      // Create new user
+      const newUser = {
+        id: Date.now().toString(),
+        email,
+        password: hashedPassword,
+        full_name: fullName,
+        created_at: new Date().toISOString(),
+      }
+
+      // Create profile
+      const newProfile = {
+        id: Date.now().toString(),
+        user_id: newUser.id,
+        full_name: fullName,
+        email,
+        available_balance: 0,
+        total_earned: 0,
+        surveys_completed: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      // Save user
+      users.push(newUser)
+      localStorage.setItem("survey_users", JSON.stringify(users))
+
+      // Save profile
+      const profilesJson = localStorage.getItem("survey_profiles") || "[]"
+      const profiles = JSON.parse(profilesJson)
+      profiles.push(newProfile)
+      localStorage.setItem("survey_profiles", JSON.stringify(profiles))
+
+      // Set current user session
+      localStorage.setItem(
+        "survey_current_user",
+        JSON.stringify({ id: newUser.id, email: newUser.email, full_name: newUser.full_name }),
+      )
+
+      console.log("[v0] User created successfully:", newUser.id)
+      setSuccess("Account created successfully! Redirecting...")
+
+      // Redirect to dashboard
       setTimeout(() => {
         router.push("/dashboard")
       }, 1000)
+    } catch (err: any) {
+      console.error("[v0] Signup error:", err)
+      setError(err.message || "Failed to create account")
+    } finally {
+      setIsLoading(false)
     }
-  }, [state, router])
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -61,16 +130,14 @@ export default function SignUpForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-6">
-            {state?.error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {state.error}
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
             )}
 
-            {state?.success && (
+            {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                {state.success}
+                {success}
               </div>
             )}
 
@@ -126,7 +193,20 @@ export default function SignUpForm() {
               </div>
             </div>
 
-            <SubmitButton />
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </Button>
 
             <div className="text-center text-blue-700">
               Already have an account?{" "}

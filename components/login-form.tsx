@@ -1,47 +1,84 @@
 "use client"
 
-import { useFormState } from "react-dom"
-import { useFormStatus } from "react-dom"
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { signIn } from "@/lib/actions"
-
-function SubmitButton() {
-  const { pending } = useFormStatus()
-
-  return (
-    <Button
-      type="submit"
-      disabled={pending}
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
-    >
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Signing in...
-        </>
-      ) : (
-        "Sign In"
-      )}
-    </Button>
-  )
-}
+import { useState } from "react"
+import bcrypt from "bcryptjs"
 
 export default function LoginForm() {
   const router = useRouter()
-  const [state, formAction] = useFormState(signIn, null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
-  useEffect(() => {
-    if (state?.success) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+
+    console.log("[v0] Login attempt:", email)
+
+    try {
+      if (!email || !password) {
+        setError("Email and password are required")
+        setIsLoading(false)
+        return
+      }
+
+      // Get users from localStorage
+      const usersJson = localStorage.getItem("survey_users") || "[]"
+      const users = JSON.parse(usersJson)
+
+      console.log("[v0] Total users in storage:", users.length)
+
+      // Find user
+      const user = users.find((u: any) => u.email === email)
+      if (!user) {
+        console.log("[v0] User not found")
+        setError("Invalid email or password")
+        setIsLoading(false)
+        return
+      }
+
+      console.log("[v0] User found, verifying password...")
+
+      // Verify password
+      const isValid = await bcrypt.compare(password, user.password)
+
+      if (!isValid) {
+        console.log("[v0] Invalid password")
+        setError("Invalid email or password")
+        setIsLoading(false)
+        return
+      }
+
+      console.log("[v0] Login successful")
+
+      // Set current user session
+      localStorage.setItem(
+        "survey_current_user",
+        JSON.stringify({ id: user.id, email: user.email, full_name: user.full_name }),
+      )
+
+      // Redirect to dashboard
       router.push("/dashboard")
+    } catch (err: any) {
+      console.error("[v0] Login error:", err)
+      setError(err.message || "Failed to sign in")
+    } finally {
+      setIsLoading(false)
     }
-  }, [state, router])
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -59,11 +96,9 @@ export default function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-6">
-            {state?.error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {state.error}
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
             )}
 
             <div className="space-y-4">
@@ -103,7 +138,20 @@ export default function LoginForm() {
               </div>
             </div>
 
-            <SubmitButton />
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
 
             <div className="text-center text-blue-700">
               Don't have an account?{" "}

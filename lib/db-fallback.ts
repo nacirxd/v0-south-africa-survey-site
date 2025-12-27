@@ -43,13 +43,24 @@ const STORAGE_KEYS = {
 
 function getFromStorage<T>(key: string): T[] {
   if (typeof window === "undefined") return []
-  const data = localStorage.getItem(key)
-  return data ? JSON.parse(data) : []
+  try {
+    const data = localStorage.getItem(key)
+    console.log(`[v0] Reading from storage ${key}:`, data ? `${data.substring(0, 100)}...` : "empty")
+    return data ? JSON.parse(data) : []
+  } catch (error) {
+    console.error(`[v0] Error reading from storage ${key}:`, error)
+    return []
+  }
 }
 
 function saveToStorage<T>(key: string, data: T[]) {
   if (typeof window === "undefined") return
-  localStorage.setItem(key, JSON.stringify(data))
+  try {
+    localStorage.setItem(key, JSON.stringify(data))
+    console.log(`[v0] Saved to storage ${key}:`, data.length, "items")
+  } catch (error) {
+    console.error(`[v0] Error saving to storage ${key}:`, error)
+  }
 }
 
 export function initializeFallbackDb() {
@@ -89,13 +100,19 @@ export function initializeFallbackDb() {
 export const fallbackDb = {
   users: {
     create: (user: User) => {
+      console.log("[v0] Creating user in fallback DB:", user.email)
       const users = getFromStorage<User>(STORAGE_KEYS.users)
       users.push(user)
       saveToStorage(STORAGE_KEYS.users, users)
+      console.log("[v0] Total users now:", users.length)
     },
     findByEmail: (email: string) => {
+      console.log("[v0] Finding user by email:", email)
       const users = getFromStorage<User>(STORAGE_KEYS.users)
-      return users.find((u) => u.email === email)
+      console.log("[v0] Total users in storage:", users.length)
+      const found = users.find((u) => u.email === email)
+      console.log("[v0] User found:", found ? "yes" : "no")
+      return found
     },
     findById: (id: string) => {
       const users = getFromStorage<User>(STORAGE_KEYS.users)
