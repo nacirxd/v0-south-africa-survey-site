@@ -5,18 +5,18 @@ import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
+import { Loader2, MapPin, Eye, EyeOff, AlertCircle } from "lucide-react"
 import Link from "next/link"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { signUp } from "@/lib/actions"
 
-function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
+function SubmitButton({ isSubmitting, cooldownSeconds }: { isSubmitting: boolean; cooldownSeconds: number }) {
   const { pending } = useFormStatus()
 
   return (
     <Button
       type="submit"
-      disabled={pending || isSubmitting}
+      disabled={pending || isSubmitting || cooldownSeconds > 0}
       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px] disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {pending || isSubmitting ? (
@@ -24,6 +24,8 @@ function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Creating account...
         </>
+      ) : cooldownSeconds > 0 ? (
+        `Wait ${cooldownSeconds}s before trying again`
       ) : (
         "Create Account"
       )}
@@ -35,27 +37,60 @@ export default function SignUpForm() {
   const [state, formAction] = useFormState(signUp, null)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [cooldownSeconds, setCooldownSeconds] = useState(0)
   const lastSubmitTime = useRef<number>(0)
+  const cooldownInterval = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (cooldownInterval.current) {
+        clearInterval(cooldownInterval.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      cooldownInterval.current = setInterval(() => {
+        setCooldownSeconds((prev) => {
+          if (prev <= 1) {
+            if (cooldownInterval.current) {
+              clearInterval(cooldownInterval.current)
+            }
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => {
+      if (cooldownInterval.current) {
+        clearInterval(cooldownInterval.current)
+      }
+    }
+  }, [cooldownSeconds])
 
   const handleSubmit = async (formData: FormData) => {
     const now = Date.now()
-    // Prevent submissions within 3 seconds of each other
-    if (now - lastSubmitTime.current < 3000) {
+    const cooldownTime = 10000 // 10 seconds
+
+    if (now - lastSubmitTime.current < cooldownTime) {
       return
     }
 
     lastSubmitTime.current = now
     setIsSubmitting(true)
+    setCooldownSeconds(10)
 
     try {
       await formAction(formData)
     } finally {
-      // Keep button disabled for 3 seconds after submission
-      setTimeout(() => {
-        setIsSubmitting(false)
-      }, 3000)
+      setIsSubmitting(false)
     }
   }
+
+  const showRateLimitWarning = state?.error?.includes("rate limit") || state?.error?.includes("too many")
 
   return (
     <div className="w-full max-w-md">
@@ -77,6 +112,16 @@ export default function SignUpForm() {
             {state?.error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {state.error}
+              </div>
+            )}
+
+            {showRateLimitWarning && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <strong>Rate limit protection:</strong> Please wait at least 10 seconds between signup attempts to
+                  avoid being temporarily blocked.
+                </div>
               </div>
             )}
 
@@ -142,7 +187,7 @@ export default function SignUpForm() {
               </div>
             </div>
 
-            <SubmitButton isSubmitting={isSubmitting} />
+            <SubmitButton isSubmitting={isSubmitting} cooldownSeconds={cooldownSeconds} />
 
             <div className="text-center text-blue-700">
               Already have an account?{" "}

@@ -100,22 +100,7 @@ export async function signUp(prevState: any, formData: FormData) {
   const origin = `${protocol}://${host}`
 
   try {
-    const { data: existingUser, error: checkError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email.toString())
-      .single()
-
-    if (existingUser) {
-      return { error: "This email is already registered. Try logging in or use another email." }
-    }
-
-    // If checkError is not "PGRST116" (no rows found), it's a real error
-    if (checkError && checkError.code !== "PGRST116") {
-      console.error("Error checking existing user:", checkError)
-    }
-
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
       options: {
@@ -128,7 +113,11 @@ export async function signUp(prevState: any, formData: FormData) {
 
     if (error) {
       if (error.message.includes("email rate limit exceeded") || error.message.includes("Email rate limit exceeded")) {
-        return { error: "Too many signup attempts. Please try again in a few minutes." }
+        return { error: "Too many signup attempts from your location. Please wait 5-10 minutes and try again." }
+      }
+
+      if (error.message.includes("over_email_send_rate_limit")) {
+        return { error: "Email service is temporarily busy. Please try again in a few minutes." }
       }
 
       if (
@@ -136,7 +125,7 @@ export async function signUp(prevState: any, formData: FormData) {
         error.message.includes("already been registered") ||
         error.message.includes("email address is already registered")
       ) {
-        return { error: "This email is already registered. Try logging in or use another email." }
+        return { error: "This email is already registered. Try logging in instead." }
       }
 
       if (error.message.includes("Password should be at least")) {
@@ -150,7 +139,11 @@ export async function signUp(prevState: any, formData: FormData) {
       return { error: error.message }
     }
 
-    return { success: "Account created successfully! You can now log in." }
+    if (data?.user?.identities?.length === 0) {
+      return { error: "This email is already registered. Try logging in instead." }
+    }
+
+    return { success: "Account created successfully! Please check your email to confirm your account." }
   } catch (error) {
     console.error("Sign up error:", error)
     return { error: "An unexpected error occurred. Please try again." }
