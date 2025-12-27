@@ -1,6 +1,6 @@
 "use server"
 
-import { signIn as localSignIn, signUp as localSignUp, signOut as localSignOut } from "./auth"
+import { signIn as localSignIn, signUp as localSignUp, signOut as localSignOut } from "./auth-local"
 import { redirect } from "next/navigation"
 
 // Sign in action

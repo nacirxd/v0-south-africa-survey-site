@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CheckSquare, Clock, DollarSign, MapPin, Play } from "lucide-react"
-import { supabase } from "@/lib/supabase/client"
 import Link from "next/link"
 
 interface Task {
@@ -26,118 +25,32 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [currentDay, setCurrentDay] = useState<number>(-1)
 
   useEffect(() => {
     fetchTasks()
-    fetchCompletedTasks()
-
-    const interval = setInterval(() => {
-      const southAfricaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" }))
-      const dayOfWeek = southAfricaTime.getDay()
-
-      if (currentDay !== -1 && currentDay !== dayOfWeek) {
-        console.log("[v0] Day changed from", currentDay, "to", dayOfWeek, "- refreshing tasks")
-        fetchTasks()
-        fetchCompletedTasks()
-      }
-      setCurrentDay(dayOfWeek)
-    }, 60000) // Check every minute
-
-    return () => clearInterval(interval)
-  }, [userId, currentDay])
+  }, [userId])
 
   const fetchTasks = async () => {
     try {
-      console.log("[v0] Fetching daily tasks with rotation logic...")
-
-      const today = new Date()
-      const southAfricaTime = new Date(today.toLocaleString("en-US", { timeZone: "Africa/Johannesburg" }))
-      const dayOfWeek = southAfricaTime.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-
-      setTasks([])
       setLoading(true)
 
-      const { data: allTasks, error } = await supabase
-        .from("daily_tasks")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true })
+      const response = await fetch("/api/tasks")
+      const data = await response.json()
 
-      if (error) throw error
-
-      console.log("[v0] Found", allTasks?.length || 0, "total tasks")
-
-      if (allTasks && allTasks.length > 0) {
-        const tasksPerDay = 10
-        const totalTasks = allTasks.length
-        const startIndex = (dayOfWeek * tasksPerDay) % totalTasks
-
-        const rotatedTasks = []
-        for (let i = 0; i < tasksPerDay && i < totalTasks; i++) {
-          const taskIndex = (startIndex + i) % totalTasks
-          rotatedTasks.push(allTasks[taskIndex])
-        }
-
-        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        console.log(
-          "[v0] South Africa time:",
-          southAfricaTime.toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" }),
-        )
-        console.log("[v0] Selected", rotatedTasks.length, "tasks for", dayNames[dayOfWeek], "(weekday", dayOfWeek, ")")
-        console.log("[v0] Task IDs for today:", rotatedTasks.map((t) => t.id.slice(0, 8)).join(", "))
-        setTasks(rotatedTasks)
-        setCurrentDay(dayOfWeek)
+      if (response.ok) {
+        setTasks(data.tasks || [])
+        setCompletedTasks(new Set(data.completedTaskIds || []))
       } else {
+        console.error("[v0] Error fetching tasks:", data.error)
         setTasks([])
       }
     } catch (error) {
-      console.error("Error fetching tasks:", error)
+      console.error("[v0] Error fetching tasks:", error)
       setTasks([])
     } finally {
       setLoading(false)
     }
   }
-
-  const fetchCompletedTasks = async () => {
-    try {
-      console.log("[v0] Checking completed tasks for user:", userId)
-
-      const southAfricaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" }))
-      const twentyFourHoursAgo = new Date(southAfricaTime.getTime() - 24 * 60 * 60 * 1000)
-
-      const { data: completions, error } = await supabase
-        .from("task_completions")
-        .select("task_id, completed_at")
-        .eq("user_id", userId)
-        .gte("completed_at", twentyFourHoursAgo.toISOString())
-
-      if (error) throw error
-
-      const completedIds = new Set<string>()
-      if (completions) {
-        completions.forEach((completion) => {
-          completedIds.add(completion.task_id)
-        })
-      }
-
-      console.log("[v0] Found", completedIds.size, "tasks completed in last 24 hours (SA time)")
-      setCompletedTasks(completedIds)
-    } catch (error) {
-      console.error("Error fetching completed tasks:", error)
-    }
-  }
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchCompletedTasks()
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
-  }, [userId])
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -182,17 +95,12 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Daily Tasks</h1>
-        <p className="text-blue-100">
-          Complete surveys about South Africa. New tasks rotate weekly based on South African time.
-        </p>
+        <p className="text-blue-100">Complete surveys about South Africa. New tasks rotate daily.</p>
         <Button
-          onClick={() => {
-            fetchTasks()
-            fetchCompletedTasks()
-          }}
+          onClick={fetchTasks}
           variant="outline"
           size="sm"
-          className="mt-2 text-blue-600 border-blue-300 hover:bg-blue-50"
+          className="mt-2 text-blue-600 border-blue-300 hover:bg-blue-50 bg-transparent"
         >
           Refresh Tasks
         </Button>
@@ -211,7 +119,6 @@ export default function DailyTasksList({ userId }: DailyTasksListProps) {
         ) : (
           tasks.map((task) => {
             const isCompleted = completedTasks.has(task.id)
-            const isAvailable = !isCompleted
 
             return (
               <Card key={task.id} className={`border-blue-200 ${isCompleted ? "opacity-60" : ""}`}>

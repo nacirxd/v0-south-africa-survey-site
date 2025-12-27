@@ -1,8 +1,8 @@
-import { getCurrentUser } from "@/lib/auth"
-import { createClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-local"
 import { redirect } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DashboardOverview from "@/components/dashboard-overview"
+import { getUserProfile, getAllActiveTasks, getTaskCompletionsToday, getRecentCompletions } from "@/lib/db-queries"
 
 export default async function DashboardPage() {
   // Get the user from local auth
@@ -13,35 +13,17 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
-  // Get user profile and stats from Supabase
-  const supabase = createClient()
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  // Get user profile and stats from local database
+  const profile = getUserProfile(user.id)
+  const todayTasksCount = getTaskCompletionsToday(user.id)
+  const allTasks = getAllActiveTasks()
+  const recentCompletions = getRecentCompletions(user.id, 24)
 
-  const southAfricaTime = new Date().toLocaleString("en-US", { timeZone: "Africa/Johannesburg" })
-  const today = new Date(southAfricaTime)
-  const todayString = today.toISOString().split("T")[0]
-
-  // Get today's completed tasks count
-  const { count: todayTasksCount } = await supabase
-    .from("task_completions")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("completed_at", `${todayString}T00:00:00.000Z`)
-    .lte("completed_at", `${todayString}T23:59:59.999Z`)
-
-  const { data: allTasks } = await supabase.from("daily_tasks").select("*").eq("is_active", true).order("id")
-
-  const twentyFourHoursAgo = new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString()
-  const { data: recentCompletions } = await supabase
-    .from("task_completions")
-    .select("task_id")
-    .eq("user_id", user.id)
-    .gte("completed_at", twentyFourHoursAgo)
-
-  const recentTaskIds = new Set(recentCompletions?.map((c) => c.task_id) || [])
+  const recentTaskIds = new Set(recentCompletions.map((c: any) => c.task_id))
 
   let availableTasksCount = 0
   if (allTasks && allTasks.length > 0) {
+    const today = new Date()
     const dayOfWeek = today.getDay()
     const tasksPerDay = 10
     const totalTasks = allTasks.length
@@ -50,7 +32,7 @@ export default async function DashboardPage() {
     for (let i = 0; i < tasksPerDay; i++) {
       const taskIndex = (dayOfWeek * tasksPerDay + i) % totalTasks
       const task = allTasks[taskIndex]
-      if (task && !recentTaskIds.has(task.id)) {
+      if (task && !recentTaskIds.has((task as any).id)) {
         todayTasks.push(task)
       }
     }
@@ -58,8 +40,8 @@ export default async function DashboardPage() {
   }
 
   const stats = {
-    totalEarnings: profile?.total_earnings || 0,
-    availableBalance: profile?.available_balance || 0,
+    totalEarnings: (profile as any)?.total_earnings || 0,
+    availableBalance: (profile as any)?.available_balance || 0,
     todayTasksCompleted: todayTasksCount || 0,
     availableTasks: availableTasksCount,
   }

@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { History, DollarSign, Clock, CreditCard, Building2, Smartphone } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 
 interface HistoryAndWithdrawalsProps {
   userId: string
@@ -32,7 +31,6 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
     mobileNumber: "",
   })
 
-  const supabase = createClient()
   const MINIMUM_WITHDRAWAL = 200
 
   const paymentMethods = [
@@ -51,30 +49,21 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
 
   const fetchData = async () => {
     try {
-      // Fetch available balance
-      const { data: profile } = await supabase.from("profiles").select("available_balance").eq("id", userId).single()
+      const response = await fetch("/api/history")
+      const data = await response.json()
 
-      if (profile) {
-        setAvailableBalance(profile.available_balance || 0)
+      if (response.ok) {
+        setEarningsHistory(data.earnings || [])
+        setWithdrawalHistory(data.withdrawals || [])
       }
 
-      // Fetch earnings history
-      const { data: earnings } = await supabase
-        .from("earnings_history")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+      // Fetch profile for balance
+      const profileResponse = await fetch("/api/profile")
+      const profileData = await profileResponse.json()
 
-      setEarningsHistory(earnings || [])
-
-      // Fetch withdrawal history
-      const { data: withdrawals } = await supabase
-        .from("withdrawal_requests")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-
-      setWithdrawalHistory(withdrawals || [])
+      if (profileResponse.ok && profileData.profile) {
+        setAvailableBalance(profileData.profile.available_balance || 0)
+      }
     } catch (error) {
       console.error("Error fetching data:", error)
     }
@@ -97,15 +86,23 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
         return
       }
 
-      const { error } = await supabase.from("withdrawal_requests").insert({
-        user_id: userId,
-        amount,
-        payment_method: paymentMethod,
-        payment_details: paymentDetails,
-        status: "pending",
+      const response = await fetch("/api/withdraw", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount,
+          paymentMethod,
+          paymentDetails,
+        }),
       })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit withdrawal")
+      }
 
       alert("Withdrawal request submitted successfully!")
       setWithdrawalAmount("")
@@ -303,7 +300,7 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
                       className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200"
                     >
                       <div>
-                        <p className="font-medium text-green-900">{earning.task_title}</p>
+                        <p className="font-medium text-green-900">{earning.description}</p>
                         <p className="text-sm text-green-600">
                           {new Date(earning.created_at).toLocaleDateString("en-ZA")}
                         </p>
@@ -311,7 +308,7 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
                       <div className="text-right">
                         <p className="font-bold text-green-600">+${earning.amount}</p>
                         <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          {earning.earning_type}
+                          {earning.type}
                         </Badge>
                       </div>
                     </div>
@@ -348,7 +345,7 @@ export default function HistoryAndWithdrawals({ userId }: HistoryAndWithdrawalsP
                       <div>
                         <p className="font-medium text-blue-900">${withdrawal.amount} withdrawal</p>
                         <p className="text-sm text-blue-600">
-                          {new Date(withdrawal.created_at).toLocaleDateString("en-ZA")} • {withdrawal.payment_method}
+                          {new Date(withdrawal.requested_at).toLocaleDateString("en-ZA")} • {withdrawal.payment_method}
                         </p>
                       </div>
                       <Badge

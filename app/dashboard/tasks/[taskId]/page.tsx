@@ -1,7 +1,8 @@
-import { createClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-local"
 import { redirect } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import SurveyInterface from "@/components/survey-interface"
+import { getUserProfile, getTaskById, hasUserCompletedTask } from "@/lib/db-queries"
 
 interface TaskPageProps {
   params: {
@@ -10,40 +11,27 @@ interface TaskPageProps {
 }
 
 export default async function TaskPage({ params }: TaskPageProps) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
   if (!user) {
     redirect("/auth/login")
   }
 
   // Get task details
-  const { data: task } = await supabase.from("daily_tasks").select("*").eq("id", params.taskId).single()
+  const task = getTaskById(params.taskId)
 
   if (!task) {
     redirect("/dashboard/tasks")
   }
 
-  const now = new Date()
-  const saOffset = 2 * 60 * 60 * 1000 // UTC+2 in milliseconds
-  const saTime = new Date(now.getTime() + saOffset)
-  const twentyFourHoursAgo = new Date(saTime.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  // Check if user already completed this task in the last 24 hours
+  const hasCompleted = hasUserCompletedTask(user.id, params.taskId)
 
-  const { data: recentCompletion } = await supabase
-    .from("task_completions")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("task_id", params.taskId)
-    .gte("completed_at", twentyFourHoursAgo)
-    .single()
-
-  if (recentCompletion) {
+  if (hasCompleted) {
     redirect("/dashboard/tasks")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const profile = getUserProfile(user.id)
 
   return (
     <DashboardLayout user={user} profile={profile}>

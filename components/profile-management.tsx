@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { User, MapPin, Calendar } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface ProfileManagementProps {
   user: any
@@ -11,6 +13,41 @@ interface ProfileManagementProps {
 }
 
 export default function ProfileManagement({ user, profile }: ProfileManagementProps) {
+  const router = useRouter()
+  const [fullName, setFullName] = useState(profile?.full_name || "")
+  const [country, setCountry] = useState(profile?.country || "South Africa")
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const handleUpdateProfile = async () => {
+    setIsUpdating(true)
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName,
+          country,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update profile")
+      }
+
+      alert("Profile updated successfully!")
+      router.refresh()
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      alert("Error updating profile. Please try again.")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -32,7 +69,8 @@ export default function ProfileManagement({ user, profile }: ProfileManagementPr
             <div className="space-y-2">
               <label className="text-sm font-medium text-blue-900">Full Name</label>
               <Input
-                defaultValue={profile?.full_name || ""}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
@@ -43,7 +81,8 @@ export default function ProfileManagement({ user, profile }: ProfileManagementPr
             <div className="space-y-2">
               <label className="text-sm font-medium text-blue-900">Country</label>
               <Input
-                defaultValue={profile?.country || "South Africa"}
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
                 className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
@@ -56,7 +95,13 @@ export default function ProfileManagement({ user, profile }: ProfileManagementPr
               />
             </div>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">Update Profile</Button>
+          <Button
+            onClick={handleUpdateProfile}
+            disabled={isUpdating}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isUpdating ? "Updating..." : "Update Profile"}
+          </Button>
         </CardContent>
       </Card>
 

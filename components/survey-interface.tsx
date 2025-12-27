@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, ArrowRight, CheckCircle, DollarSign, MapPin } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase/client"
 
 interface SurveyQuestion {
   id: string
@@ -224,131 +223,27 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      console.log("[v0] Starting survey submission for user:", userId, "task:", task.id)
+      console.log("[v0] Submitting survey for task:", task.id)
 
-      console.log("[v0] Checking if task was completed in last 24 hours...")
-
-      // Get current UTC time
-      const now = new Date()
-
-      // Calculate South Africa time (UTC+2)
-      const saOffset = 2 * 60 // South Africa is UTC+2 (120 minutes)
-      const saTime = new Date(now.getTime() + saOffset * 60 * 1000)
-
-      // Calculate 24 hours ago in South Africa time
-      const twentyFourHoursAgo = new Date(saTime.getTime() - 24 * 60 * 60 * 1000)
-
-      console.log("[v0] Current UTC time:", now.toISOString())
-      console.log("[v0] SA Time:", saTime.toISOString())
-      console.log("[v0] 24 hours ago (SA):", twentyFourHoursAgo.toISOString())
-
-      // Check for any existing completion for this user and task (not just recent ones)
-      const { data: existingCompletion, error: checkError } = await supabase
-        .from("task_completions")
-        .select("id, completed_at")
-        .eq("user_id", userId)
-        .eq("task_id", task.id)
-        .single()
-
-      if (checkError && checkError.code !== "PGRST116") {
-        console.log("[v0] Error checking completion:", checkError)
-        throw new Error(`Failed to verify task status: ${checkError.message}`)
-      }
-
-      if (existingCompletion) {
-        // Check if the existing completion is within the last 24 hours
-        const completionTime = new Date(existingCompletion.completed_at)
-        const timeDiff = saTime.getTime() - completionTime.getTime()
-        const hoursDiff = timeDiff / (1000 * 60 * 60)
-
-        console.log("[v0] Found existing completion at:", existingCompletion.completed_at)
-        console.log("[v0] Hours since completion:", hoursDiff.toFixed(2))
-
-        if (hoursDiff < 24) {
-          console.log("[v0] Task completed within last 24 hours, blocking submission")
-          alert("This survey has already been completed within the last 24 hours. Please wait before attempting again.")
-          router.push("/dashboard/tasks")
-          return
-        } else {
-          console.log(
-            "[v0] Task was completed more than 24 hours ago, but cannot create duplicate. Updating existing record...",
-          )
-
-          // Update the existing completion record instead of creating a new one
-          const { error: updateError } = await supabase
-            .from("task_completions")
-            .update({
-              answers: answers,
-              reward_earned: task.reward_amount,
-              completed_at: now.toISOString(),
-            })
-            .eq("id", existingCompletion.id)
-
-          if (updateError) {
-            console.log("[v0] Update completion error:", updateError)
-            throw new Error(`Failed to update task completion: ${updateError.message}`)
-          }
-
-          console.log("[v0] Updated existing task completion record")
-        }
-      } else {
-        console.log("[v0] No existing completion found, creating new record...")
-
-        // Submit new task completion
-        const { error: completionError } = await supabase.from("task_completions").insert({
-          user_id: userId,
-          task_id: task.id,
-          answers: answers,
-          reward_earned: task.reward_amount,
-        })
-
-        if (completionError) {
-          console.log("[v0] Task completion error:", completionError)
-          throw new Error(`Failed to record task completion: ${completionError.message}`)
-        }
-
-        console.log("[v0] Created new task completion record")
-      }
-
-      // Update user profile earnings
-      console.log("[v0] Updating user earnings...")
-      const { error: profileError } = await supabase.rpc("update_user_earnings", {
-        user_id: userId,
-        amount: task.reward_amount,
+      const response = await fetch("/api/tasks/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId: task.id,
+          answers,
+          rewardAmount: task.reward_amount,
+        }),
       })
 
-      if (profileError) {
-        console.log("[v0] Profile update error:", profileError)
-        throw new Error(`Failed to update earnings: ${profileError.message}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit survey")
       }
 
-      // Add to earnings history
-      console.log("[v0] Adding to earnings history...")
-      const { error: historyError } = await supabase.from("earnings_history").insert({
-        user_id: userId,
-        amount: task.reward_amount,
-        type: "task_completion",
-        description: `Completed survey: ${task.title}`,
-        task_id: task.id,
-      })
-
-      if (historyError) {
-        console.log("[v0] History error:", historyError)
-        throw new Error(`Failed to record earnings history: ${historyError.message}`)
-      }
-
-      // Update task completion count
-      console.log("[v0] Incrementing task completions...")
-      const { error: taskError } = await supabase.rpc("increment_task_completions", {
-        task_id: task.id,
-      })
-
-      if (taskError) {
-        console.log("[v0] Task increment error:", taskError)
-        throw new Error(`Failed to update task statistics: ${taskError.message}`)
-      }
-
-      console.log("[v0] Survey submission completed successfully!")
+      console.log("[v0] Survey submitted successfully!")
       setIsCompleted(true)
     } catch (error) {
       console.error("[v0] Error submitting survey:", error)
