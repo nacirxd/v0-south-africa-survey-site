@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DailyTasksList from "@/components/daily-tasks-list"
+import { calculateUserBalance } from "@/lib/balance-utils"
 
 export default function TasksPage() {
   const router = useRouter()
@@ -26,17 +27,17 @@ export default function TasksPage() {
 
     console.log("[v0] Current user found:", currentUser.id)
 
-    // Use the user data directly from survey_current_user
+    const { availableBalance, totalEarnings } = calculateUserBalance(currentUser.id)
+
     setUser(currentUser)
 
-    // Load profile
-    const profiles = JSON.parse(localStorage.getItem("survey_profiles") || "[]")
-    const userProfile = profiles.find((p: any) => p.user_id === currentUser.id) || {
+    const userProfile = {
       user_id: currentUser.id,
       full_name: currentUser.full_name,
-      available_balance: 0,
-      total_earned: 0,
+      available_balance: availableBalance,
+      total_earned: totalEarnings,
     }
+
     setProfile(userProfile)
     setLoading(false)
   }, [router])

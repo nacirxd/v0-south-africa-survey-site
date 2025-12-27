@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import ProfileManagement from "@/components/profile-management"
+import { calculateUserBalance } from "@/lib/balance-utils"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -25,16 +26,17 @@ export default function ProfilePage() {
     const currentUser = JSON.parse(currentUserJson)
     console.log("[v0] Current user found:", currentUser.id)
 
+    const { availableBalance, totalEarnings } = calculateUserBalance(currentUser.id)
+
     setUser(currentUser)
 
-    // Load profile
-    const profiles = JSON.parse(localStorage.getItem("survey_profiles") || "[]")
-    const userProfile = profiles.find((p: any) => p.user_id === currentUser.id) || {
+    const userProfile = {
       user_id: currentUser.id,
       full_name: currentUser.full_name,
-      available_balance: 0,
-      total_earned: 0,
+      available_balance: availableBalance,
+      total_earned: totalEarnings,
     }
+
     setProfile(userProfile)
     setLoading(false)
   }, [router])

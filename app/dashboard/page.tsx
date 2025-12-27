@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/dashboard-layout"
 import DashboardOverview from "@/components/dashboard-overview"
 import { Loader2 } from "lucide-react"
 import { initializeTasks } from "@/lib/seed-data"
+import { calculateUserBalance } from "@/lib/balance-utils"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -34,25 +35,17 @@ export default function DashboardPage() {
 
       initializeTasks()
 
-      // Get user profile from localStorage
-      const profilesJson = localStorage.getItem("survey_profiles") || "[]"
-      const profiles = JSON.parse(profilesJson)
-      const profile = profiles.find((p: any) => p.user_id === currentUser.id)
+      const { availableBalance, totalEarnings, completedTasksCount } = calculateUserBalance(currentUser.id)
 
       const tasksJson = localStorage.getItem("survey_tasks") || "[]"
       const tasks = JSON.parse(tasksJson)
-      const completionsJson = localStorage.getItem("survey_completions") || "[]"
-      const completions = JSON.parse(completionsJson)
-      const userCompletions = completions.filter((c: any) => c.user_id === currentUser.id)
 
-      if (profile) {
-        setStats({
-          totalEarnings: profile.total_earned || 0,
-          availableBalance: profile.available_balance || 0,
-          todayTasksCompleted: userCompletions.length,
-          availableTasks: tasks.filter((t: any) => t.is_active).length,
-        })
-      }
+      setStats({
+        totalEarnings,
+        availableBalance,
+        todayTasksCompleted: completedTasksCount,
+        availableTasks: tasks.filter((t: any) => t.is_active).length,
+      })
 
       setLoading(false)
     } catch (err) {
@@ -76,7 +69,11 @@ export default function DashboardPage() {
     return null
   }
 
-  const profile = { full_name: user.full_name }
+  const profile = {
+    full_name: user.full_name,
+    available_balance: stats.availableBalance,
+    total_earned: stats.totalEarnings,
+  }
 
   return (
     <DashboardLayout user={user} profile={profile}>
