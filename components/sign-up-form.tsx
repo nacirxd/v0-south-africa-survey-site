@@ -7,19 +7,19 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, MapPin, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { signUp } from "@/lib/actions"
 
-function SubmitButton() {
+function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
   const { pending } = useFormStatus()
 
   return (
     <Button
       type="submit"
-      disabled={pending}
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px]"
+      disabled={pending || isSubmitting}
+      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-lg h-[60px] disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {pending ? (
+      {pending || isSubmitting ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Creating account...
@@ -34,6 +34,28 @@ function SubmitButton() {
 export default function SignUpForm() {
   const [state, formAction] = useFormState(signUp, null)
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const lastSubmitTime = useRef<number>(0)
+
+  const handleSubmit = async (formData: FormData) => {
+    const now = Date.now()
+    // Prevent submissions within 3 seconds of each other
+    if (now - lastSubmitTime.current < 3000) {
+      return
+    }
+
+    lastSubmitTime.current = now
+    setIsSubmitting(true)
+
+    try {
+      await formAction(formData)
+    } finally {
+      // Keep button disabled for 3 seconds after submission
+      setTimeout(() => {
+        setIsSubmitting(false)
+      }, 3000)
+    }
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -51,7 +73,7 @@ export default function SignUpForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-6">
+          <form action={handleSubmit} className="space-y-6">
             {state?.error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {state.error}
@@ -120,7 +142,7 @@ export default function SignUpForm() {
               </div>
             </div>
 
-            <SubmitButton />
+            <SubmitButton isSubmitting={isSubmitting} />
 
             <div className="text-center text-blue-700">
               Already have an account?{" "}
