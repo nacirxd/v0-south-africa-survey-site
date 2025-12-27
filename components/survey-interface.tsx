@@ -225,22 +225,54 @@ export default function SurveyInterface({ task, userId }: SurveyInterfaceProps) 
     try {
       console.log("[v0] Submitting survey for task:", task.id)
 
-      const response = await fetch("/api/tasks/complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          taskId: task.id,
-          answers,
-          rewardAmount: task.reward_amount,
-        }),
-      })
+      const userStr = localStorage.getItem("survey_current_user")
+      if (!userStr) {
+        throw new Error("User not found")
+      }
 
-      const data = await response.json()
+      const user = JSON.parse(userStr)
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to submit survey")
+      // Get existing completions
+      const completionsStr = localStorage.getItem("survey_completions")
+      const completions = completionsStr ? JSON.parse(completionsStr) : []
+
+      // Check if already completed in last 24 hours
+      const now = Date.now()
+      const oneDayAgo = now - 24 * 60 * 60 * 1000
+      const recentCompletion = completions.find(
+        (c: any) => c.userId === user.id && c.taskId === task.id && c.completedAt > oneDayAgo,
+      )
+
+      if (recentCompletion) {
+        throw new Error("Task already completed in the last 24 hours")
+      }
+
+      // Add new completion
+      const newCompletion = {
+        id: Date.now().toString(),
+        userId: user.id,
+        taskId: task.id,
+        answers,
+        rewardAmount: task.reward_amount,
+        completedAt: now,
+      }
+
+      completions.push(newCompletion)
+      localStorage.setItem("survey_completions", JSON.stringify(completions))
+
+      // Update user's available balance
+      user.available_balance = (user.available_balance || 0) + task.reward_amount
+      localStorage.setItem("survey_current_user", JSON.stringify(user))
+
+      // Update users list
+      const usersStr = localStorage.getItem("survey_users")
+      if (usersStr) {
+        const users = JSON.parse(usersStr)
+        const userIndex = users.findIndex((u: any) => u.id === user.id)
+        if (userIndex !== -1) {
+          users[userIndex] = user
+          localStorage.setItem("survey_users", JSON.stringify(users))
+        }
       }
 
       console.log("[v0] Survey submitted successfully!")
