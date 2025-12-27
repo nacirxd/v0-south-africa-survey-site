@@ -1,50 +1,73 @@
-import { getCurrentUser } from "@/lib/auth-local"
-import { redirect } from "next/navigation"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import DashboardOverview from "@/components/dashboard-overview"
-import { getUserProfile, getAllActiveTasks, getTaskCompletionsToday, getRecentCompletions } from "@/lib/db-queries"
+import { Loader2 } from "lucide-react"
 
-export default async function DashboardPage() {
-  // Get the user from local auth
-  const user = await getCurrentUser()
+export default function DashboardPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalEarnings: 0,
+    availableBalance: 0,
+    todayTasksCompleted: 0,
+    availableTasks: 10,
+  })
 
-  // If no user, redirect to login
-  if (!user) {
-    redirect("/auth/login")
-  }
+  useEffect(() => {
+    const currentUserJson = localStorage.getItem("survey_current_user")
 
-  // Get user profile and stats from local database
-  const profile = getUserProfile(user.id)
-  const todayTasksCount = getTaskCompletionsToday(user.id)
-  const allTasks = getAllActiveTasks()
-  const recentCompletions = getRecentCompletions(user.id, 24)
-
-  const recentTaskIds = new Set(recentCompletions.map((c: any) => c.task_id))
-
-  let availableTasksCount = 0
-  if (allTasks && allTasks.length > 0) {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
-    const tasksPerDay = 10
-    const totalTasks = allTasks.length
-
-    const todayTasks = []
-    for (let i = 0; i < tasksPerDay; i++) {
-      const taskIndex = (dayOfWeek * tasksPerDay + i) % totalTasks
-      const task = allTasks[taskIndex]
-      if (task && !recentTaskIds.has((task as any).id)) {
-        todayTasks.push(task)
-      }
+    if (!currentUserJson) {
+      console.log("[v0] No user session found, redirecting to login")
+      router.push("/auth/login")
+      return
     }
-    availableTasksCount = todayTasks.length
+
+    try {
+      const currentUser = JSON.parse(currentUserJson)
+      console.log("[v0] User session found:", currentUser.email)
+      setUser(currentUser)
+
+      // Get user profile from localStorage
+      const profilesJson = localStorage.getItem("survey_profiles") || "[]"
+      const profiles = JSON.parse(profilesJson)
+      const profile = profiles.find((p: any) => p.user_id === currentUser.id)
+
+      if (profile) {
+        setStats({
+          totalEarnings: profile.total_earnings || 0,
+          availableBalance: profile.available_balance || 0,
+          todayTasksCompleted: 0,
+          availableTasks: 10,
+        })
+      }
+
+      setLoading(false)
+    } catch (err) {
+      console.error("[v0] Error loading user session:", err)
+      router.push("/auth/login")
+    }
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-blue-900">Loading dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
-  const stats = {
-    totalEarnings: (profile as any)?.total_earnings || 0,
-    availableBalance: (profile as any)?.available_balance || 0,
-    todayTasksCompleted: todayTasksCount || 0,
-    availableTasks: availableTasksCount,
+  if (!user) {
+    return null
   }
+
+  const profile = { full_name: user.full_name }
 
   return (
     <DashboardLayout user={user} profile={profile}>
