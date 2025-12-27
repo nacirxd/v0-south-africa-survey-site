@@ -45,16 +45,20 @@ export default function TaskPage({ params }: TaskPageProps) {
     setProfile(userProfile)
 
     // Load task
-    const tasks = JSON.parse(localStorage.getItem("daily_tasks") || "[]")
+    const tasks = JSON.parse(localStorage.getItem("survey_tasks") || "[]")
     const foundTask = tasks.find((t: any) => t.id === params.taskId)
 
+    console.log("[v0] Looking for task:", params.taskId)
+    console.log("[v0] Found task:", foundTask)
+
     if (!foundTask) {
+      console.log("[v0] Task not found, redirecting to tasks list")
       router.push("/dashboard/tasks")
       return
     }
 
     // Check if user already completed this task in the last 24 hours
-    const completions = JSON.parse(localStorage.getItem("task_completions") || "[]")
+    const completions = JSON.parse(localStorage.getItem("survey_completions") || "[]")
     const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000
     const hasCompleted = completions.some(
       (c: any) =>
@@ -63,7 +67,10 @@ export default function TaskPage({ params }: TaskPageProps) {
         new Date(c.completed_at).getTime() > twentyFourHoursAgo,
     )
 
+    console.log("[v0] User has completed this task:", hasCompleted)
+
     if (hasCompleted) {
+      console.log("[v0] Task already completed, redirecting to tasks list")
       router.push("/dashboard/tasks")
       return
     }
